@@ -7,7 +7,6 @@ import {
   EyeOff,
   Activity,
   UserRound,
-  Settings,
   Check,
   X,
   Sparkles,
@@ -30,7 +29,7 @@ export const Route = createFileRoute("/recruiter/dashboard")({
   component: RecruiterDashboard,
 });
 
-type SectionId = "dashboard" | "resumes" | "blind" | "activities" | "settings";
+type SectionId = "dashboard" | "resumes" | "blind" | "activities";
 
 const stats = [
   { label: "Total Resumes", value: 248, hint: "+12 this week", icon: FileText },
@@ -131,7 +130,6 @@ function RecruiterDashboard() {
     { id: "blind", label: "Blind Hiring", icon: EyeOff },
     { id: "activities", label: "Activities", icon: Activity },
     { label: "My Profile", to: "/recruiter/profile", icon: UserRound },
-    { id: "settings", label: "Settings", icon: Settings },
   ];
 
   const subtitle: Record<SectionId, string> = {
@@ -139,7 +137,6 @@ function RecruiterDashboard() {
     resumes: "All resumes in the pipeline",
     blind: "Bias-aware anonymous screening",
     activities: "Recent hiring activity",
-    settings: "Preferences and account settings",
   };
 
   const titles: Record<SectionId, string> = {
@@ -147,7 +144,6 @@ function RecruiterDashboard() {
     resumes: "Resumes",
     blind: "Blind Hiring",
     activities: "Activities",
-    settings: "Settings",
   };
 
   return (
@@ -158,7 +154,7 @@ function RecruiterDashboard() {
         onSelect={(id) => setSection(id as SectionId)}
       />
       <div className="flex-1 min-w-0 flex flex-col">
-        <Navbar title={titles[section]} subtitle={subtitle[section]} />
+        <Navbar title={titles[section]} subtitle={subtitle[section]} profileTo="/recruiter/profile" />
 
         <main className="p-6 space-y-6">
           <motion.div
@@ -193,7 +189,6 @@ function RecruiterDashboard() {
 
             {section === "blind" && <BlindSection blind={blind} setBlind={setBlind} />}
             {section === "activities" && <ActivitiesSection />}
-            {section === "settings" && <SettingsSection />}
           </motion.div>
         </main>
       </div>
@@ -371,9 +366,6 @@ function ResumesSection({
                   >
                     View Resume
                   </button>
-                  <ActionBtn>AI Analysis</ActionBtn>
-                  <ActionBtn>Feedback</ActionBtn>
-                  <ActionBtn>Shortlist</ActionBtn>
                   <button className="btn-glow rounded-xl bg-[var(--color-primary)] px-3 py-2 text-xs font-medium hover:brightness-110 transition">
                     Select
                   </button>
@@ -464,17 +456,6 @@ function ActivitiesSection() {
           </li>
         ))}
       </ul>
-    </GlassCard>
-  );
-}
-
-function SettingsSection() {
-  return (
-    <GlassCard className="p-5">
-      <h3 className="text-sm font-semibold">Settings</h3>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Notifications, integrations, and workspace preferences will live here.
-      </p>
     </GlassCard>
   );
 }
