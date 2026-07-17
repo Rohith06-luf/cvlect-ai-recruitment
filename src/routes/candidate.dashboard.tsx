@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard,
   FileText,
@@ -16,6 +17,7 @@ import { Sidebar, type SidebarItem } from "@/components/Sidebar";
 import { Navbar } from "@/components/Navbar";
 import { GlassCard } from "@/components/GlassCard";
 import { ProgressRing } from "@/components/ProgressRing";
+import { api, type CandidateProfile, type Application } from "@/lib/api";
 
 export const Route = createFileRoute("/candidate/dashboard")({
   head: () => ({ meta: [{ title: "Candidate Dashboard — CVlect" }] }),
@@ -23,14 +25,6 @@ export const Route = createFileRoute("/candidate/dashboard")({
 });
 
 type SectionId = "dashboard" | "applications" | "resume" | "resume-score" | "skill-gap" | "settings";
-
-const enrolledJobs = [
-  { id: 1, company: "Linear", role: "Senior Product Engineer", location: "Remote", status: "Applied", appliedDate: "2024-01-15", salary: "$150K - $200K" },
-  { id: 2, company: "Vercel", role: "Frontend Platform Engineer", location: "New York", status: "Interview", appliedDate: "2024-01-10", salary: "$140K - $180K" },
-  { id: 3, company: "Stripe", role: "UI Engineer, Dashboard", location: "London", status: "Under Review", appliedDate: "2024-01-08", salary: "$130K - $170K" },
-  { id: 4, company: "Figma", role: "Product Engineer", location: "San Francisco", status: "Applied", appliedDate: "2024-01-05", salary: "$160K - $210K" },
-  { id: 5, company: "GitHub", role: "Frontend Engineer", location: "Remote", status: "Rejected", appliedDate: "2023-12-28", salary: "$145K - $195K" },
-];
 
 const items: SidebarItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -55,9 +49,20 @@ const timeline = [
   { label: "Rejected", tone: "idle" as const },
 ];
 
-
 function CandidateDashboard() {
   const [section, setSection] = useState<SectionId>("dashboard");
+
+  // Fetch candidate profile (for the logged-in user)
+  const { data: profile } = useQuery({
+    queryKey: ["my-profile"],
+    queryFn: () => api.getMyProfile(),
+  });
+
+  // Fetch applications
+  const { data: applications } = useQuery({
+    queryKey: ["my-applications"],
+    queryFn: () => api.listMyApplications(),
+  });
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -77,11 +82,11 @@ function CandidateDashboard() {
             transition={{ duration: 0.25 }}
             className="space-y-6"
           >
-            {section === "dashboard" && <DashboardSection />}
-            {section === "applications" && <ApplicationsSection />}
-            {section === "resume" && <ResumeSection />}
-            {section === "resume-score" && <ResumeScoreSection />}
-            {section === "skill-gap" && <SkillGapSection />}
+            {section === "dashboard" && <DashboardSection profile={profile} />}
+            {section === "applications" && <ApplicationsSection applications={applications ?? []} />}
+            {section === "resume" && <ResumeSection profile={profile} />}
+            {section === "resume-score" && <ResumeScoreSection profile={profile} />}
+            {section === "skill-gap" && <SkillGapSection profile={profile} />}
             {section === "settings" && <SettingsSection />}
           </motion.div>
         </main>
@@ -92,7 +97,14 @@ function CandidateDashboard() {
 
 /* ---------- Sections ---------- */
 
-function DashboardSection() {
+function DashboardSection({ profile }: { profile?: CandidateProfile }) {
+  const name = profile?.full_name ?? "Priya Sharma";
+  const careerHealth = profile?.career_health ?? 92;
+  const resumeScore = profile?.resume_score ?? 88;
+  const applicationsCount = 24; // Could come from API
+  const shortlistedCount = 7;
+  const interviewsCount = 3;
+
   return (
     <>
       {/* Hero */}
@@ -102,16 +114,16 @@ function DashboardSection() {
           <div className="relative flex items-center justify-between gap-6 flex-wrap">
             <div className="min-w-0">
               <div className="text-xs uppercase tracking-wider text-muted-foreground">Welcome back</div>
-              <h2 className="mt-1 text-3xl font-semibold tracking-tight">Priya Sharma</h2>
+              <h2 className="mt-1 text-3xl font-semibold tracking-tight">{name}</h2>
               <p className="mt-2 text-sm text-muted-foreground max-w-md">
                 Your career health is trending up. Three new roles matched your profile this week.
               </p>
             </div>
             <div className="flex items-center gap-4">
-              <ProgressRing value={92} size={92} label="Career" />
+              <ProgressRing value={careerHealth} size={92} label="Career" />
               <div className="text-xs text-muted-foreground max-w-[140px]">
                 Career Health Score<br />
-                <span className="text-white font-semibold text-sm">92/100</span>
+                <span className="text-white font-semibold text-sm">{careerHealth}/100</span>
               </div>
             </div>
           </div>
@@ -120,11 +132,11 @@ function DashboardSection() {
 
       {/* Statistics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: "Resume Score", value: 88 },
-          { label: "Applications", value: 24 },
-          { label: "Shortlisted", value: 7 },
-          { label: "Interviews", value: 3 },
+        [
+          { label: "Resume Score", value: resumeScore },
+          { label: "Applications", value: applicationsCount },
+          { label: "Shortlisted", value: shortlistedCount },
+          { label: "Interviews", value: interviewsCount },
         ].map((s) => (
           <GlassCard key={s.label} hover className="p-5 flex items-center gap-4">
             <ProgressRing value={typeof s.value === "number" && s.value > 100 ? 100 : s.value} size={56} />
@@ -139,7 +151,7 @@ function DashboardSection() {
   );
 }
 
-function ApplicationsSection() {
+function ApplicationsSection({ applications }: { applications: Application[] }) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Applied":
@@ -160,36 +172,54 @@ function ApplicationsSection() {
       <GlassCard className="p-6">
         <h2 className="text-lg font-semibold mb-4">Enrolled Jobs</h2>
         <div className="space-y-4">
-          {enrolledJobs.map((job) => (
-            <div key={job.id} className="rounded-xl border border-border bg-white/[0.03] p-4 hover:bg-white/[0.06] transition">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <h3 className="font-semibold">{job.role}</h3>
-                    <span className={`text-xs font-medium ${getStatusColor(job.status)}`}>{job.status}</span>
+          {applications.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No applications yet. Browse jobs and apply!
+            </div>
+          ) : (
+            applications.map((job) => (
+              <div key={job.id} className="rounded-xl border border-border bg-white/[0.03] p-4 hover:bg-white/[0.06] transition">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <h3 className="font-semibold">{job.job_title ?? "Unknown Role"}</h3>
+                      <span className={`text-xs font-medium ${getStatusColor(job.status)}`}>{job.status}</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{job.company} · {job.location}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Applied: {job.applied_date}</p>
+                    <p className="text-sm font-medium mt-2">{job.salary}</p>
                   </div>
-                  <p className="text-sm text-muted-foreground">{job.company} · {job.location}</p>
-                  <p className="text-xs text-muted-foreground mt-1">Applied: {job.appliedDate}</p>
-                  <p className="text-sm font-medium mt-2">{job.salary}</p>
-                </div>
-                <div className="flex gap-2 shrink-0">
-                  <button className="rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-white/5 transition">
-                    View
-                  </button>
-                  <button className="rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-white/5 transition">
-                    Details
-                  </button>
+                  <div className="flex gap-2 shrink-0">
+                    <button className="rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-white/5 transition">
+                      View
+                    </button>
+                    <button className="rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-white/5 transition">
+                      Details
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </GlassCard>
     </>
   );
 }
 
-function ResumeSection() {
+function ResumeSection({ profile }: { profile?: CandidateProfile }) {
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      await api.uploadResume(file);
+      window.location.reload();
+    } catch (err) {
+      console.error("Upload failed:", err);
+      alert("Failed to upload resume");
+    }
+  };
+
   return (
     <>
       {/* Two column: Upload + AI Analysis */}
@@ -197,26 +227,32 @@ function ResumeSection() {
         <GlassCard className="p-6 lg:col-span-2">
           <div className="text-sm font-semibold">Upload Resume</div>
           <div className="mt-4 rounded-xl border border-dashed border-border bg-white/[0.02] p-8 text-center">
-            <div className="mx-auto h-11 w-11 rounded-xl bg-white/5 grid place-items-center">
-              <Upload className="h-5 w-5 text-[var(--color-secondary)]" />
-            </div>
-            <div className="mt-3 text-sm">Drag & drop your resume</div>
-            <div className="mt-1 text-xs text-muted-foreground">PDF or DOCX · up to 5MB</div>
-            <button className="btn-glow mt-4 rounded-xl bg-[var(--color-primary)] px-4 py-2 text-xs font-medium">
-              Choose file
-            </button>
+            <input type="file" accept=".pdf,.doc,.docx" onChange={handleUpload} className="hidden" id="resume-upload" />
+            <label htmlFor="resume-upload" className="cursor-pointer">
+              <div className="mx-auto h-11 w-11 rounded-xl bg-white/5 grid place-items-center">
+                <Upload className="h-5 w-5 text-[var(--color-secondary)]" />
+              </div>
+              <div className="mt-3 text-sm">Drag & drop your resume</div>
+              <div className="mt-1 text-xs text-muted-foreground">PDF or DOCX · up to 5MB</div>
+              <button type="button" onClick={() => document.getElementById("resume-upload")?.click()} className="btn-glow mt-4 rounded-xl bg-[var(--color-primary)] px-4 py-2 text-xs font-medium">
+                Choose file
+              </button>
+            </label>
           </div>
 
-          <div className="mt-4 rounded-xl border border-border bg-white/[0.03] p-4 flex items-center gap-3">
-            <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-medium truncate">Priya_Sharma_Resume.pdf</div>
-              <div className="text-[11px] text-muted-foreground">Uploaded 2 days ago · AI score 88</div>
-              <div className="mt-2 h-1.5 rounded-full bg-white/5 overflow-hidden">
-                <div className="h-full rounded-full" style={{ width: "88%", background: "var(--color-secondary)" }} />
+          {profile && (
+            <div className="mt-4 rounded-xl border border-border bg-white/[0.03] p-4 flex items-center gap-3">
+              <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium truncate">{profile.full_name}_Resume.pdf</div>
+                <div className="text-[11px] text-muted-foreground">Uploaded · AI score {profile.resume_score}</div>
+                <div className="mt-2 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                  <div className="h-full rounded-full" style={{ width: `${profile.resume_score}%`, background: "var(--color-secondary)" }} />
+                </div>
               </div>
             </div>
           </div>
+        )}
         </GlassCard>
 
         <GlassCard className="p-6 lg:col-span-3">
@@ -225,17 +261,17 @@ function ResumeSection() {
             <button className="text-xs text-[var(--color-highlight)] hover:underline">Improve resume →</button>
           </div>
           <div className="mt-5 grid grid-cols-2 md:grid-cols-3 gap-5">
-            <MetricRing label="Overall" value={88} />
-            <MetricRing label="ATS" value={92} />
-            <MetricRing label="Keywords" value={81} />
+            <MetricRing label="Overall" value={profile?.resume_score ?? 88} />
+            <MetricRing label="ATS" value={profile?.ats_score ?? 92} />
+            <MetricRing label="Keywords" value={profile?.keywords_score ?? 81} />
           </div>
 
           <div className="mt-5 space-y-3">
-            {[
-              { label: "Experience Match", value: 90 },
-              { label: "Projects", value: 84 },
-              { label: "Education", value: 78 },
-              { label: "Achievements", value: 72 },
+            [
+              { label: "Experience Match", value: profile?.experience_match ?? 90 },
+              { label: "Projects", value: profile?.projects_score ?? 84 },
+              { label: "Education", value: profile?.education_score ?? 78 },
+              { label: "Achievements", value: profile?.achievements_score ?? 72 },
             ].map((r) => (
               <div key={r.label}>
                 <div className="flex items-center justify-between text-xs">
@@ -254,22 +290,22 @@ function ResumeSection() {
   );
 }
 
-function ResumeScoreSection() {
+function ResumeScoreSection({ profile }: { profile?: CandidateProfile }) {
   return (
     <GlassCard className="p-6">
       <h2 className="text-lg font-semibold mb-4">AI Resume Score</h2>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-5 mb-6">
-        <MetricRing label="Overall" value={88} />
-        <MetricRing label="ATS" value={92} />
-        <MetricRing label="Keywords" value={81} />
+        <MetricRing label="Overall" value={profile?.resume_score ?? 88} />
+        <MetricRing label="ATS" value={profile?.ats_score ?? 92} />
+        <MetricRing label="Keywords" value={profile?.keywords_score ?? 81} />
       </div>
 
       <div className="space-y-3">
-        {[
-          { label: "Experience Match", value: 90 },
-          { label: "Projects", value: 84 },
-          { label: "Education", value: 78 },
-          { label: "Achievements", value: 72 },
+        [
+          { label: "Experience Match", value: profile?.experience_match ?? 90 },
+          { label: "Projects", value: profile?.projects_score ?? 84 },
+          { label: "Education", value: profile?.education_score ?? 78 },
+          { label: "Achievements", value: profile?.achievements_score ?? 72 },
         ].map((r) => (
           <div key={r.label}>
             <div className="flex items-center justify-between text-xs">
@@ -286,14 +322,17 @@ function ResumeScoreSection() {
   );
 }
 
-function SkillGapSection() {
+function SkillGapSection({ profile }: { profile?: CandidateProfile }) {
+  const currentSkills = profile?.current_skills ?? ["React", "TypeScript", "Node.js", "Testing", "Design Systems"];
+  const missingSkills = profile?.missing_skills ?? ["GraphQL", "Rust", "System Design"];
+
   return (
     <GlassCard className="p-6">
       <div className="text-sm font-semibold">Skill Gap</div>
       <div className="mt-4">
         <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Current Skills</div>
         <div className="mt-2 flex flex-wrap gap-1.5">
-          {["React", "TypeScript", "Node.js", "Testing", "Design Systems"].map((s) => (
+          {currentSkills.map((s) => (
             <span key={s} className="rounded-full px-2.5 py-1 text-[11px] bg-white/5 border border-white/5">
               {s}
             </span>
@@ -303,7 +342,7 @@ function SkillGapSection() {
       <div className="mt-4">
         <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Missing Skills</div>
         <div className="mt-2 flex flex-wrap gap-1.5">
-          {["GraphQL", "Rust", "System Design"].map((s) => (
+          {missingSkills.map((s) => (
             <span key={s} className="rounded-full px-2.5 py-1 text-[11px]" style={{ background: "color-mix(in oklab, var(--color-warning) 15%, transparent)", color: "var(--color-warning)" }}>
               {s}
             </span>

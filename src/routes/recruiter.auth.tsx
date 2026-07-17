@@ -15,7 +15,7 @@ function RecruiterAuth() {
       altLinkText="Create recruiter account"
       altLinkTo="/recruiter/auth"
     >
-      <AuthForm submitLabel="Sign in" onSubmitTo="/recruiter/dashboard" createLabel="Create recruiter account →" />
+      <AuthForm submitLabel="Sign in" onSubmitTo="/recruiter/dashboard" createLabel="Create recruiter account →" role="recruiter" />
     </AuthLayout>
   );
 }

@@ -1,8 +1,10 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { GlassCard } from "@/components/GlassCard";
+import { useAuth } from "@/lib/auth";
+import { ApiError } from "@/lib/api";
 
 export function AuthLayout({
   title,
@@ -64,17 +66,64 @@ export function AuthForm({
   submitLabel,
   onSubmitTo,
   createLabel,
+  role,
 }: {
   submitLabel: string;
   onSubmitTo: string;
   createLabel: string;
+  role: "recruiter" | "candidate";
 }) {
+  const { login, signup } = useAuth();
+  const navigate = useNavigate();
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setBusy(true);
+    try {
+      let user;
+      if (mode === "signin") {
+        user = await login(email, password);
+      } else {
+        user = await signup({ name, email, password, role });
+      }
+      // Redirect based on role
+      navigate({ to: user.role === "recruiter" ? "/recruiter/dashboard" : "/candidate/dashboard" });
+    } catch (err) {
+      if (err instanceof ApiError) setError(err.detail);
+      else setError("Something went wrong. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
-    <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+    <form className="space-y-4" onSubmit={handleSubmit}>
+      {mode === "signup" && (
+        <Field label="Full name">
+          <input
+            type="text"
+            placeholder="Your name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            className="w-full rounded-xl bg-white/5 border border-border px-3.5 py-2.5 text-sm outline-none focus:border-secondary/60 transition"
+          />
+        </Field>
+      )}
       <Field label="Email">
         <input
           type="email"
           placeholder="you@work.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
           className="w-full rounded-xl bg-white/5 border border-border px-3.5 py-2.5 text-sm outline-none focus:border-secondary/60 transition"
         />
       </Field>
@@ -82,9 +131,18 @@ export function AuthForm({
         <input
           type="password"
           placeholder="••••••••"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
           className="w-full rounded-xl bg-white/5 border border-border px-3.5 py-2.5 text-sm outline-none focus:border-secondary/60 transition"
         />
       </Field>
+
+      {error && (
+        <div className="rounded-lg border border-[var(--color-error)]/40 bg-[var(--color-error)]/10 px-3 py-2 text-xs text-[var(--color-error)]">
+          {error}
+        </div>
+      )}
 
       <div className="flex items-center justify-between text-xs">
         <label className="flex items-center gap-2 text-muted-foreground cursor-pointer">
@@ -94,12 +152,13 @@ export function AuthForm({
         <a className="text-[var(--color-highlight)] hover:underline" href="#">Forgot password?</a>
       </div>
 
-      <Link
-        to={onSubmitTo}
-        className="btn-glow w-full inline-flex items-center justify-center rounded-xl bg-[var(--color-primary)] px-4 py-2.5 text-sm font-medium hover:brightness-110 transition"
+      <button
+        type="submit"
+        disabled={busy}
+        className="btn-glow w-full inline-flex items-center justify-center rounded-xl bg-[var(--color-primary)] px-4 py-2.5 text-sm font-medium hover:brightness-110 transition disabled:opacity-60"
       >
-        {submitLabel}
-      </Link>
+        {busy ? "Please wait…" : mode === "signin" ? submitLabel : "Create account"}
+      </button>
 
       <div className="flex items-center gap-3 py-1">
         <div className="h-px flex-1 bg-border" />
@@ -115,7 +174,16 @@ export function AuthForm({
       </button>
 
       <div className="pt-2 text-center text-xs text-muted-foreground">
-        <a href="#" className="hover:text-white">{createLabel}</a>
+        <button
+          type="button"
+          onClick={() => {
+            setMode(mode === "signin" ? "signup" : "signin");
+            setError(null);
+          }}
+          className="hover:text-white"
+        >
+          {mode === "signin" ? createLabel : "Already have an account? Sign in"}
+        </button>
       </div>
     </form>
   );

@@ -15,7 +15,7 @@ function CandidateAuth() {
       altLinkText="Create candidate account"
       altLinkTo="/candidate/auth"
     >
-      <AuthForm submitLabel="Sign in" onSubmitTo="/candidate/dashboard" createLabel="Create candidate account →" />
+      <AuthForm submitLabel="Sign in" onSubmitTo="/candidate/dashboard" createLabel="Create candidate account →" role="candidate" />
     </AuthLayout>
   );
 }
