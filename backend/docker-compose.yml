@@ -1,0 +1,13 @@
+version: "3.9"
+services:
+  api:
+    build: .
+    container_name: resume-ai-api
+    ports:
+      - "8000:8000"
+    environment:
+      - SECRET_KEY=dev-secret-key
+      - DATABASE_URL=sqlite:///./app.db
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
+    volumes:
+      - .:/app
