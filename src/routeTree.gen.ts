@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as RecruiterProfileRouteImport } from './routes/recruiter.profile'
 import { Route as RecruiterDashboardRouteImport } from './routes/recruiter.dashboard'
 import { Route as RecruiterAuthRouteImport } from './routes/recruiter.auth'
 import { Route as CandidateDashboardRouteImport } from './routes/candidate.dashboard'
@@ -18,6 +19,11 @@ import { Route as CandidateAuthRouteImport } from './routes/candidate.auth'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecruiterProfileRoute = RecruiterProfileRouteImport.update({
+  id: '/recruiter/profile',
+  path: '/recruiter/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RecruiterDashboardRoute = RecruiterDashboardRouteImport.update({
@@ -47,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/candidate/dashboard': typeof CandidateDashboardRoute
   '/recruiter/auth': typeof RecruiterAuthRoute
   '/recruiter/dashboard': typeof RecruiterDashboardRoute
+  '/recruiter/profile': typeof RecruiterProfileRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByTo {
   '/candidate/dashboard': typeof CandidateDashboardRoute
   '/recruiter/auth': typeof RecruiterAuthRoute
   '/recruiter/dashboard': typeof RecruiterDashboardRoute
+  '/recruiter/profile': typeof RecruiterProfileRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,6 +70,7 @@ export interface FileRoutesById {
   '/candidate/dashboard': typeof CandidateDashboardRoute
   '/recruiter/auth': typeof RecruiterAuthRoute
   '/recruiter/dashboard': typeof RecruiterDashboardRoute
+  '/recruiter/profile': typeof RecruiterProfileRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -71,6 +80,7 @@ export interface FileRouteTypes {
     | '/candidate/dashboard'
     | '/recruiter/auth'
     | '/recruiter/dashboard'
+    | '/recruiter/profile'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -78,6 +88,7 @@ export interface FileRouteTypes {
     | '/candidate/dashboard'
     | '/recruiter/auth'
     | '/recruiter/dashboard'
+    | '/recruiter/profile'
   id:
     | '__root__'
     | '/'
@@ -85,6 +96,7 @@ export interface FileRouteTypes {
     | '/candidate/dashboard'
     | '/recruiter/auth'
     | '/recruiter/dashboard'
+    | '/recruiter/profile'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -93,6 +105,7 @@ export interface RootRouteChildren {
   CandidateDashboardRoute: typeof CandidateDashboardRoute
   RecruiterAuthRoute: typeof RecruiterAuthRoute
   RecruiterDashboardRoute: typeof RecruiterDashboardRoute
+  RecruiterProfileRoute: typeof RecruiterProfileRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -102,6 +115,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recruiter/profile': {
+      id: '/recruiter/profile'
+      path: '/recruiter/profile'
+      fullPath: '/recruiter/profile'
+      preLoaderRoute: typeof RecruiterProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/recruiter/dashboard': {
@@ -141,6 +161,7 @@ const rootRouteChildren: RootRouteChildren = {
   CandidateDashboardRoute: CandidateDashboardRoute,
   RecruiterAuthRoute: RecruiterAuthRoute,
   RecruiterDashboardRoute: RecruiterDashboardRoute,
+  RecruiterProfileRoute: RecruiterProfileRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
