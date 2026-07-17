@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import DateTime, String, Text
+from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -15,4 +15,5 @@ class Job(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False)
     required_skills: Mapped[str | None] = mapped_column(Text, nullable=True)
     experience_required: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    recruiter_id: Mapped[str] = mapped_column(String(64), ForeignKey("users.id"), nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

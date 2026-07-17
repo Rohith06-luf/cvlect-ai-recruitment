@@ -132,7 +132,7 @@ function DashboardSection({ profile }: { profile?: CandidateProfile }) {
 
       {/* Statistics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        [
+        {[
           { label: "Resume Score", value: resumeScore },
           { label: "Applications", value: applicationsCount },
           { label: "Shortlisted", value: shortlistedCount },
@@ -251,10 +251,8 @@ function ResumeSection({ profile }: { profile?: CandidateProfile }) {
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
         </GlassCard>
-
         <GlassCard className="p-6 lg:col-span-3">
           <div className="flex items-center justify-between">
             <div className="text-sm font-semibold">AI Resume Analysis</div>
@@ -267,7 +265,7 @@ function ResumeSection({ profile }: { profile?: CandidateProfile }) {
           </div>
 
           <div className="mt-5 space-y-3">
-            [
+            {[
               { label: "Experience Match", value: profile?.experience_match ?? 90 },
               { label: "Projects", value: profile?.projects_score ?? 84 },
               { label: "Education", value: profile?.education_score ?? 78 },
@@ -301,7 +299,7 @@ function ResumeScoreSection({ profile }: { profile?: CandidateProfile }) {
       </div>
 
       <div className="space-y-3">
-        [
+        {[
           { label: "Experience Match", value: profile?.experience_match ?? 90 },
           { label: "Projects", value: profile?.projects_score ?? 84 },
           { label: "Education", value: profile?.education_score ?? 78 },

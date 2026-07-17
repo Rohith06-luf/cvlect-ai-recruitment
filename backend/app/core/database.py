@@ -1,6 +1,6 @@
 from typing import Generator
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text, inspect
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.core.config import settings
@@ -27,9 +27,38 @@ def init_db() -> None:
     from app.models.candidate import Candidate  # noqa: F401
     from app.models.job import Job  # noqa: F401
     from app.models.resume import Resume  # noqa: F401
+    from app.models.application import Application  # noqa: F401
     from app.models.user import User
 
     Base.metadata.create_all(bind=engine)
+    
+    # Self-healing migrations: check if resumes table is missing new columns
+    inspector = inspect(engine)
+    if inspector.has_table("resumes"):
+        existing_cols = {col["name"] for col in inspector.get_columns("resumes")}
+        new_cols = {
+            "raw_text": "TEXT",
+            "skills_list": "TEXT",
+            "experience_years": "INTEGER",
+            "parsed_education": "TEXT",
+            "parsed_projects": "TEXT",
+            "parsed_certifications": "TEXT",
+            "summary": "TEXT",
+            "fraud_score": "FLOAT",
+            "fraud_warnings": "TEXT",
+            "bias_score": "FLOAT",
+            "bias_flagged_terms": "TEXT"
+        }
+        
+        with engine.begin() as conn:
+            for col_name, col_type in new_cols.items():
+                if col_name not in existing_cols:
+                    try:
+                        conn.execute(text(f"ALTER TABLE resumes ADD COLUMN {col_name} {col_type}"))
+                        print(f"Added column {col_name} ({col_type}) to resumes table.")
+                    except Exception as e:
+                        print(f"Error adding column {col_name}: {e}")
+
     with SessionLocal() as db:
         admin_email = "admin@example.com"
         existing_admin = db.query(User).filter(User.email == admin_email).first()

@@ -16,6 +16,9 @@ import {
 import { Sidebar, type SidebarItem } from "@/components/Sidebar";
 import { Navbar } from "@/components/Navbar";
 import { GlassCard } from "@/components/GlassCard";
+import { useAuth } from "@/lib/auth";
+import { api } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/candidate/profile")({
   head: () => ({ meta: [{ title: "My Profile — CVlect" }] }),
@@ -32,6 +35,52 @@ const items: SidebarItem[] = [
 ];
 
 function CandidateProfile() {
+  const { user } = useAuth();
+  
+  // Fetch the current user's profile data
+  const { data: profile, isLoading, error } = useQuery({
+    queryKey: ["candidate-profile", user?.id],
+    queryFn: () => api.getUser(user?.id ?? 0),
+    enabled: !!user,
+    retry: false,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex bg-background">
+        <Sidebar items={items} />
+        <div className="flex-1 min-w-0 flex flex-col">
+          <Navbar title="My Profile" subtitle="Manage your account and preferences" profileTo="/candidate/profile" />
+          <main className="p-6 space-y-6">
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]" />
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !profile) {
+    return (
+      <div className="min-h-screen flex bg-background">
+        <Sidebar items={items} />
+        <div className="flex-1 min-w-0 flex flex-col">
+          <Navbar title="My Profile" subtitle="Manage your account and preferences" profileTo="/candidate/profile" />
+          <main className="p-6 space-y-6">
+            <GlassCard className="p-6 text-center">
+              <p className="text-muted-foreground">Please log in to view your profile.</p>
+            </GlassCard>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  const initials = profile?.name 
+    ? profile.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    : 'PS';
+
   return (
     <div className="min-h-screen flex bg-background">
       <Sidebar items={items} />
@@ -49,11 +98,11 @@ function CandidateProfile() {
           <GlassCard className="p-6">
             <div className="flex items-center gap-5">
               <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-[var(--color-secondary)] to-[var(--color-primary)] grid place-items-center text-2xl font-semibold text-[var(--color-background)]">
-                PS
+                {initials}
               </div>
               <div>
-                <h2 className="text-xl font-semibold">Priya Sharma</h2>
-                <p className="text-sm text-muted-foreground">Senior Frontend Engineer</p>
+                <h2 className="text-xl font-semibold">{profile?.name ?? 'Loading...'}</h2>
+                <p className="text-sm text-muted-foreground">{profile?.job_title ?? 'Candidate'}</p>
                 <div className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-[var(--color-success)] bg-[var(--color-success)]/15 rounded-full px-2 py-0.5">
                   Verified account
                 </div>
@@ -65,18 +114,18 @@ function CandidateProfile() {
             <GlassCard className="p-5">
               <h3 className="text-sm font-semibold mb-4">Contact</h3>
               <div className="space-y-3 text-sm">
-                <Row icon={Mail} label="Email" value="priya.sharma@email.com" />
-                <Row icon={Phone} label="Phone" value="+91 (98) 234-5678" />
-                <Row icon={MapPin} label="Location" value="Bengaluru, India" />
+                <Row icon={Mail} label="Email" value={profile?.email ?? 'Not set'} />
+                <Row icon={Phone} label="Phone" value={profile?.phone ?? 'Not set'} />
+                <Row icon={MapPin} label="Location" value={profile?.location ?? 'Not set'} />
               </div>
             </GlassCard>
 
             <GlassCard className="p-5">
               <h3 className="text-sm font-semibold mb-4">Professional</h3>
               <div className="space-y-3 text-sm">
-                <Row icon={Building2} label="Current" value="Senior Frontend Engineer" />
-                <Row icon={Briefcase} label="Experience" value="6 years" />
-                <Row icon={LinkIcon} label="Portfolio" value="priya-portfolio.dev" />
+                <Row icon={Building2} label="Current" value={profile?.job_title ?? 'Not set'} />
+                <Row icon={Briefcase} label="Experience" value={profile?.experience ?? 'Not set'} />
+                <Row icon={LinkIcon} label="Portfolio" value={profile?.about ?? 'Not set'} />
               </div>
             </GlassCard>
           </div>
@@ -84,15 +133,14 @@ function CandidateProfile() {
           <GlassCard className="p-5">
             <h3 className="text-sm font-semibold mb-4">About</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Product-focused frontend engineer with deep expertise in React, TypeScript, and design systems.
-              Passionate about building accessible, performant user interfaces and mentoring junior engineers.
+              {profile?.about ?? 'No bio added yet.'}
             </p>
           </GlassCard>
 
           <GlassCard className="p-5">
             <h3 className="text-sm font-semibold mb-4">Skills</h3>
             <div className="flex flex-wrap gap-2">
-              {["React", "TypeScript", "Design Systems", "Accessibility", "Testing", "Performance", "Node.js"].map((skill) => (
+              {(profile?.current_skills ?? ["React", "TypeScript", "Design Systems", "Accessibility", "Testing", "Performance", "Node.js"]).map((skill) => (
                 <span key={skill} className="rounded-full bg-white/5 border border-white/5 px-3 py-1.5 text-xs">
                   {skill}
                 </span>

@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -20,3 +21,4 @@ class ResumeResponse(BaseModel):
     success: bool
     message: str
     data: ResumeOut | None = None
+    ai_analysis: dict[str, Any] | None = None

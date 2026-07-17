@@ -1,3 +1,4 @@
+# Core API
 fastapi==0.115.0
 uvicorn[standard]==0.32.0
 sqlalchemy==2.0.35
@@ -9,3 +10,27 @@ passlib[bcrypt]==1.7.4
 PyJWT==2.9.0
 bcrypt==4.0.1
 email-validator==2.1.1
+
+# Resume Parsing
+pymupdf==1.24.10
+spacy>=3.7.0
+
+# Embeddings & NLP
+sentence-transformers>=2.7.0
+transformers>=4.41.0
+
+# Ranking & ML
+xgboost>=2.0.0
+scikit-learn>=1.4.0
+shap>=0.45.0
+
+# Fairness / Bias
+fairlearn>=0.10.0
+
+# Vector DB
+faiss-cpu>=1.8.0
+
+# Utilities
+plotly>=5.22.0
+numpy>=1.26.0
+pandas>=2.2.0

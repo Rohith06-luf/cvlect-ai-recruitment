@@ -15,6 +15,9 @@ import {
 import { Sidebar, type SidebarItem } from "@/components/Sidebar";
 import { Navbar } from "@/components/Navbar";
 import { GlassCard } from "@/components/GlassCard";
+import { useAuth } from "@/lib/auth";
+import { api } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/recruiter/profile")({
   head: () => ({ meta: [{ title: "My Profile — CVlect" }] }),
@@ -30,6 +33,53 @@ const items: SidebarItem[] = [
 ];
 
 function RecruiterProfile() {
+  const { user } = useAuth();
+  
+  // Fetch the current user's profile data
+  const { data: profile, isLoading, error } = useQuery({
+    queryKey: ["recruiter-profile", user?.id],
+    queryFn: () => api.getUser(user?.id ?? 0),
+    enabled: !!user,
+    retry: false,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex bg-background">
+        <Sidebar items={items} />
+        <div className="flex-1 min-w-0 flex flex-col">
+          <Navbar title="My Profile" subtitle="Manage your account and preferences" profileTo="/recruiter/profile" />
+          <main className="p-6 space-y-6">
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]" />
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>
+  );
+  }
+
+  if (error || !profile) {
+    return (
+      <div className="min-h-screen flex bg-background">
+        <Sidebar items={items} />
+        <div className="flex-1 min-w-0 flex flex-col">
+          <Navbar title="My Profile" subtitle="Manage your account and preferences" profileTo="/recruiter/profile" />
+          <main className="p-6 space-y-6">
+            <GlassCard className="p-6 text-center">
+              <p className="text-muted-foreground">Please log in to view your profile.</p>
+            </GlassCard>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  const initials = profile?.name 
+    ? profile.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    : 'AR';
+
   return (
     <div className="min-h-screen flex bg-background">
       <Sidebar items={items} />
@@ -47,11 +97,11 @@ function RecruiterProfile() {
           <GlassCard className="p-6">
             <div className="flex items-center gap-5">
               <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-[var(--color-secondary)] to-[var(--color-primary)] grid place-items-center text-2xl font-semibold text-[var(--color-background)]">
-                AR
+                {initials}
               </div>
               <div>
-                <h2 className="text-xl font-semibold">Alex Reed</h2>
-                <p className="text-sm text-muted-foreground">Senior Recruiter · Talent Team</p>
+                <h2 className="text-xl font-semibold">{profile?.name ?? 'Loading...'}</h2>
+                <p className="text-sm text-muted-foreground">{profile?.job_title ?? 'Recruiter'} · {profile?.team ?? 'Talent Team'}</p>
                 <div className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-[var(--color-success)] bg-[var(--color-success)]/15 rounded-full px-2 py-0.5">
                   Verified account
                 </div>
@@ -63,18 +113,18 @@ function RecruiterProfile() {
             <GlassCard className="p-5">
               <h3 className="text-sm font-semibold mb-4">Contact</h3>
               <div className="space-y-3 text-sm">
-                <Row icon={Mail} label="Email" value="alex.reed@cvlect.com" />
-                <Row icon={Phone} label="Phone" value="+1 (415) 555-0142" />
-                <Row icon={MapPin} label="Location" value="San Francisco, CA" />
+                <Row icon={Mail} label="Email" value={profile?.email ?? 'Not set'} />
+                <Row icon={Phone} label="Phone" value={profile?.phone ?? 'Not set'} />
+                <Row icon={MapPin} label="Location" value={profile?.location ?? 'Not set'} />
               </div>
             </GlassCard>
 
             <GlassCard className="p-5">
               <h3 className="text-sm font-semibold mb-4">Work</h3>
               <div className="space-y-3 text-sm">
-                <Row icon={Building2} label="Company" value="CVlect Inc." />
-                <Row icon={Briefcase} label="Role" value="Senior Recruiter" />
-                <Row icon={UserRound} label="Team" value="Engineering Talent" />
+                <Row icon={Building2} label="Company" value={profile?.company ?? 'Not set'} />
+                <Row icon={Briefcase} label="Role" value={profile?.job_title ?? 'Not set'} />
+                <Row icon={UserRound} label="Team" value={profile?.team ?? 'Not set'} />
               </div>
             </GlassCard>
           </div>
@@ -82,8 +132,7 @@ function RecruiterProfile() {
           <GlassCard className="p-5">
             <h3 className="text-sm font-semibold mb-4">About</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Recruiter focused on senior engineering hiring. Passionate about transparent,
-              bias-aware screening and giving every candidate meaningful feedback.
+              {profile?.about ?? 'No bio added yet.'}
             </p>
           </GlassCard>
 

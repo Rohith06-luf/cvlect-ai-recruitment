@@ -35,7 +35,9 @@ async def not_found_handler(_: Request, exc: Exception) -> JSONResponse:
 
 @app.exception_handler(500)
 async def internal_server_error_handler(_: Request, exc: Exception) -> JSONResponse:
-    return JSONResponse(status_code=500, content={"success": False, "message": "Internal server error"})
+    import traceback
+    traceback.print_exc()
+    return JSONResponse(status_code=500, content={"success": False, "message": str(exc)})
 
 
 @app.get("/health", tags=["Health"], summary="Health check")
