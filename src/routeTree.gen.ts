@@ -10,33 +10,53 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as RecruiterAuthRouteImport } from './routes/recruiter.auth'
+import { Route as CandidateAuthRouteImport } from './routes/candidate.auth'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RecruiterAuthRoute = RecruiterAuthRouteImport.update({
+  id: '/recruiter/auth',
+  path: '/recruiter/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CandidateAuthRoute = CandidateAuthRouteImport.update({
+  id: '/candidate/auth',
+  path: '/candidate/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/candidate/auth': typeof CandidateAuthRoute
+  '/recruiter/auth': typeof RecruiterAuthRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/candidate/auth': typeof CandidateAuthRoute
+  '/recruiter/auth': typeof RecruiterAuthRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/candidate/auth': typeof CandidateAuthRoute
+  '/recruiter/auth': typeof RecruiterAuthRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/candidate/auth' | '/recruiter/auth'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/candidate/auth' | '/recruiter/auth'
+  id: '__root__' | '/' | '/candidate/auth' | '/recruiter/auth'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CandidateAuthRoute: typeof CandidateAuthRoute
+  RecruiterAuthRoute: typeof RecruiterAuthRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +68,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/recruiter/auth': {
+      id: '/recruiter/auth'
+      path: '/recruiter/auth'
+      fullPath: '/recruiter/auth'
+      preLoaderRoute: typeof RecruiterAuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/candidate/auth': {
+      id: '/candidate/auth'
+      path: '/candidate/auth'
+      fullPath: '/candidate/auth'
+      preLoaderRoute: typeof CandidateAuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CandidateAuthRoute: CandidateAuthRoute,
+  RecruiterAuthRoute: RecruiterAuthRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
