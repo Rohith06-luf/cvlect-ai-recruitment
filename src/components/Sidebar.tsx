@@ -4,7 +4,8 @@ import { ChevronsLeft, ChevronsRight, LogOut } from "lucide-react";
 
 export type SidebarItem = {
   label: string;
-  to: string;
+  to?: string;
+  id?: string;
   icon: ComponentType<{ className?: string }>;
 };
 
@@ -12,10 +13,14 @@ export function Sidebar({
   items,
   brand = "CVlect",
   footerTo = "/",
+  activeId,
+  onSelect,
 }: {
   items: SidebarItem[];
   brand?: string;
   footerTo?: string;
+  activeId?: string;
+  onSelect?: (id: string) => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -49,17 +54,37 @@ export function Sidebar({
 
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {items.map((item) => {
-          const active = pathname === item.to || pathname.startsWith(item.to + "/");
           const Icon = item.icon;
+          const isButton = !!item.id && !!onSelect;
+          const active = isButton
+            ? activeId === item.id
+            : item.to
+              ? pathname === item.to || pathname.startsWith(item.to + "/")
+              : false;
+          const cls = `w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-300 ${
+            active
+              ? "bg-white/10 text-white"
+              : "text-muted-foreground hover:bg-white/5 hover:text-white"
+          }`;
+
+          if (isButton) {
+            return (
+              <button
+                key={item.id}
+                onClick={() => onSelect!(item.id!)}
+                className={cls}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                {!collapsed && <span className="truncate text-left">{item.label}</span>}
+              </button>
+            );
+          }
+
           return (
             <Link
-              key={item.to}
-              to={item.to}
-              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-300 ${
-                active
-                  ? "bg-white/10 text-white"
-                  : "text-muted-foreground hover:bg-white/5 hover:text-white"
-              }`}
+              key={item.to ?? item.label}
+              to={item.to!}
+              className={cls}
             >
               <Icon className="h-4 w-4 shrink-0" />
               {!collapsed && <span className="truncate">{item.label}</span>}
