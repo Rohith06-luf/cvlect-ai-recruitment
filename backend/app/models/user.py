@@ -21,6 +21,8 @@ class User(Base):
     job_title: Mapped[str | None] = mapped_column(String(200), nullable=True)
     team: Mapped[str | None] = mapped_column(String(200), nullable=True)
     about: Mapped[str | None] = mapped_column(Text, nullable=True)
+    avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    social_links: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     candidate = relationship("Candidate", back_populates="user", uselist=False, cascade="all, delete-orphan")

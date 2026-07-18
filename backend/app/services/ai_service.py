@@ -27,6 +27,110 @@ class AIService:
         self.summarizer = ResumeSummarizer()
         self.store = FAISSStore()
 
+    def _calculate_metrics(self, parsed: dict, text: str, job_description: str) -> dict:
+        if not job_description:
+            # Default fallback when no job description is provided
+            skill_match = 0.5
+            exp_match = 0.5
+            edu_match = 0.5
+            keyword_match = 0.5
+            semantic_sim = 0.5
+            final_score = 65
+            return {
+                "skill_match": skill_match,
+                "experience_match": exp_match,
+                "education_match": edu_match,
+                "keyword_match": keyword_match,
+                "semantic_similarity": semantic_sim,
+                "final_score": final_score
+            }
+
+        # 1. Skill Match
+        resume_skills = {s.lower().strip() for s in parsed.get("skills", []) if s.strip()}
+        required_skills = self.recommender._extract_skills_from_text(job_description)
+        if required_skills:
+            skill_overlap = resume_skills & required_skills
+            skill_match = len(skill_overlap) / len(required_skills)
+        else:
+            skill_match = self._compute_skill_overlap(parsed, job_description)
+
+        # 2. Experience Match
+        candidate_exp = parsed.get("experience_years", 0)
+        # Extract required years from job description (e.g., "5+ years", "3 years")
+        exp_req_matches = re.findall(r"(\d+)\s*(?:\+?\s*years?|yrs?)", job_description, re.IGNORECASE)
+        required_exp = int(exp_req_matches[0]) if exp_req_matches else 2
+        if required_exp > 0:
+            exp_match = min(1.0, candidate_exp / required_exp)
+        else:
+            exp_match = 1.0
+
+        # 3. Education Match
+        edu_match = 0.1
+        edu_lower = [e.lower() for e in parsed.get("education", [])]
+        jd_lower = job_description.lower()
+        if any(deg in jd_lower for deg in ["phd", "ph.d", "doctor"]):
+            if any(deg in edu_lower for deg in ["phd", "ph.d", "doctor"]):
+                edu_match = 1.0
+            elif any(deg in edu_lower for deg in ["m.tech", "master", "m.sc", "msc", "m.s", "m.e", "mba"]):
+                edu_match = 0.7
+            else:
+                edu_match = 0.4
+        elif any(deg in jd_lower for deg in ["m.tech", "master", "m.sc", "msc", "m.s", "m.e", "mba"]):
+            if any(deg in edu_lower for deg in ["phd", "ph.d", "doctor"]):
+                edu_match = 1.0
+            elif any(deg in edu_lower for deg in ["m.tech", "master", "m.sc", "msc", "m.s", "m.e", "mba"]):
+                edu_match = 1.0
+            elif any(deg in edu_lower for deg in ["b.tech", "b.e", "bachelor", "b.sc", "bsc"]):
+                edu_match = 0.6
+            else:
+                edu_match = 0.3
+        else:
+            if any(deg in edu_lower for deg in ["phd", "ph.d", "doctor"]):
+                edu_match = 1.0
+            elif any(deg in edu_lower for deg in ["m.tech", "master", "m.sc", "msc", "m.s", "m.e", "mba"]):
+                edu_match = 0.8
+            elif any(deg in edu_lower for deg in ["b.tech", "b.e", "bachelor", "b.sc", "bsc"]):
+                edu_match = 0.6
+            elif edu_lower:
+                edu_match = 0.4
+
+        # 4. Keyword Match
+        job_words = {w.lower() for w in re.findall(r"\b[a-zA-Z]{3,}\b", job_description) if w.lower() not in {
+            "the", "and", "with", "for", "are", "you", "will", "have", "this", "that", "from"
+        }}
+        resume_words = {w.lower() for w in re.findall(r"\b[a-zA-Z]{3,}\b", text)}
+        if job_words:
+            keyword_match = len(resume_words & job_words) / len(job_words)
+        else:
+            keyword_match = 0.5
+
+        # 5. Semantic Similarity
+        try:
+            semantic_sim = self.matcher.match(text, job_description)
+        except Exception:
+            semantic_sim = 0.5
+
+        # Weighted calculation
+        final_score = int(round(
+            (skill_match * 0.35 +
+             exp_match * 0.20 +
+             edu_match * 0.15 +
+             keyword_match * 0.15 +
+             semantic_sim * 0.15) * 100
+        ))
+        
+        # Ensure it's between 0 and 100
+        final_score = max(0, min(100, final_score))
+
+        return {
+            "skill_match": skill_match,
+            "experience_match": exp_match,
+            "education_match": edu_match,
+            "keyword_match": keyword_match,
+            "semantic_similarity": semantic_sim,
+            "final_score": final_score
+        }
+
     def process_resume(self, file_path: str, job_description: str | None = None) -> Dict[str, Any]:
         if not Path(file_path).exists():
             raise FileNotFoundError(f"Resume file not found: {file_path}")
@@ -37,44 +141,26 @@ class AIService:
         skills = parsed.get("skills", [])
         experience = parsed.get("experience_years", 0)
 
-        # 2. Semantic Similarity Score (Sentence-BERT cosine similarity)
-        semantic_similarity = 0.0
-        if job_description:
-            semantic_similarity = self.matcher.match(text, job_description)
+        # Calculate metrics using job description
+        metrics = self._calculate_metrics(parsed, text, job_description or "")
+        ats_score = metrics["final_score"]
+        match_percentage = metrics["final_score"]
 
-        # 3. Features matrix calculations
-        skill_overlap = self._compute_skill_overlap(parsed, job_description or "")
-        
-        # Education rating
-        edu_score = 0.1
-        edu_lower = [e.lower() for e in parsed.get("education", [])]
-        if any(deg in edu_lower for deg in ["phd", "ph.d", "doctor"]):
-            edu_score = 1.0
-        elif any(deg in edu_lower for deg in ["m.tech", "master", "m.sc", "msc", "m.s", "m.e", "mba"]):
-            edu_score = 0.8
-        elif any(deg in edu_lower for deg in ["b.tech", "b.e", "bachelor", "b.sc", "bsc"]):
-            edu_score = 0.6
-        elif edu_lower:
-            edu_score = 0.4
-            
         projects_score = min(1.0, len(parsed.get("projects", [])) * 0.25)
         certs_score = min(1.0, len(parsed.get("certifications", [])) * 0.2)
-
-        # 4. Standard ATS scoring logic
-        ats_score = min(100, int(55 + min(20, len(skills) * 2) + min(15, experience * 2) + int(edu_score * 10)))
-        match_percentage = min(100, int(ats_score * 0.7 + (semantic_similarity * 100) * 0.15 + (skill_overlap * 100) * 0.15))
 
         candidate = {
             "parsed_resume": parsed,
             "raw_text": text,
             "job_description": job_description or "",
             "features": {
-                "semantic_similarity": round(semantic_similarity, 4),
+                "semantic_similarity": round(metrics["semantic_similarity"], 4),
                 "experience_years": experience,
-                "education_score": edu_score,
-                "skill_overlap": round(skill_overlap, 4),
+                "education_score": round(metrics["education_match"], 4),
+                "skill_overlap": round(metrics["skill_match"], 4),
                 "projects_score": projects_score,
                 "certifications_score": certs_score,
+                "keyword_match": round(metrics["keyword_match"], 4),
             },
         }
         
@@ -116,38 +202,31 @@ class AIService:
 
     def score_candidate(self, resume_text: str, job_description: str, candidate_payload: Dict[str, Any] | None = None) -> Dict[str, Any]:
         parsed = self.parser.parse(resume_text)
-        semantic_similarity = self.matcher.match(resume_text, job_description)
         
-        skill_overlap = self._compute_skill_overlap(parsed, job_description)
+        # Calculate metrics using job description
+        metrics = self._calculate_metrics(parsed, resume_text, job_description)
         
-        edu_score = 0.1
-        edu_lower = [e.lower() for e in parsed.get("education", [])]
-        if any(deg in edu_lower for deg in ["phd", "ph.d", "doctor"]):
-            edu_score = 1.0
-        elif any(deg in edu_lower for deg in ["m.tech", "master", "m.sc", "msc", "m.s", "m.e", "mba"]):
-            edu_score = 0.8
-        elif any(deg in edu_lower for deg in ["b.tech", "b.e", "bachelor", "b.sc", "bsc"]):
-            edu_score = 0.6
-        elif edu_lower:
-            edu_score = 0.4
-            
         projects_score = min(1.0, len(parsed.get("projects", [])) * 0.25)
         certs_score = min(1.0, len(parsed.get("certifications", [])) * 0.2)
 
         features = {
-            "semantic_similarity": round(semantic_similarity, 4),
+            "semantic_similarity": round(metrics["semantic_similarity"], 4),
             "experience_years": parsed.get("experience_years", 0),
-            "education_score": edu_score,
-            "skill_overlap": round(skill_overlap, 4),
+            "education_score": round(metrics["education_match"], 4),
+            "skill_overlap": round(metrics["skill_match"], 4),
             "projects_score": projects_score,
             "certifications_score": certs_score,
+            "keyword_match": round(metrics["keyword_match"], 4),
         }
         
         candidate = {
             "parsed_resume": parsed, 
             "raw_text": resume_text, 
             "features": features, 
-            "job_description": job_description
+            "job_description": job_description,
+            "match_percentage": metrics["final_score"],
+            "ats_score": metrics["final_score"],
+            "rank_score": metrics["final_score"] / 100.0,
         }
         
         if candidate_payload:

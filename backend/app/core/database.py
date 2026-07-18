@@ -68,6 +68,8 @@ def init_db() -> None:
             "job_title": "VARCHAR(200)",
             "team": "VARCHAR(200)",
             "about": "TEXT",
+            "avatar_url": "VARCHAR(500)",
+            "social_links": "TEXT",
         }
         with engine.begin() as conn:
             for col_name, col_type in user_cols.items():
@@ -80,13 +82,37 @@ def init_db() -> None:
 
     if inspector.has_table("candidates"):
         existing_candidate_cols = {col["name"] for col in inspector.get_columns("candidates")}
-        candidate_cols = {"summary": "TEXT"}
+        candidate_cols = {
+            "summary": "TEXT",
+            "avatar_url": "VARCHAR(500)",
+            "social_links": "TEXT",
+            "company": "VARCHAR(200)",
+            "designation": "VARCHAR(200)",
+        }
         with engine.begin() as conn:
             for col_name, col_type in candidate_cols.items():
                 if col_name not in existing_candidate_cols:
                     try:
                         conn.execute(text(f"ALTER TABLE candidates ADD COLUMN {col_name} {col_type}"))
                         print(f"Added column {col_name} ({col_type}) to candidates table.")
+                    except Exception as e:
+                        print(f"Error adding column {col_name}: {e}")
+
+    if inspector.has_table("applications"):
+        existing_app_cols = {col["name"] for col in inspector.get_columns("applications")}
+        app_cols = {
+            "missing_keywords": "TEXT",
+            "recommended_projects": "TEXT",
+            "ats_improvements": "TEXT",
+            "grammar_suggestions": "TEXT",
+            "formatting_suggestions": "TEXT",
+        }
+        with engine.begin() as conn:
+            for col_name, col_type in app_cols.items():
+                if col_name not in existing_app_cols:
+                    try:
+                        conn.execute(text(f"ALTER TABLE applications ADD COLUMN {col_name} {col_type}"))
+                        print(f"Added column {col_name} ({col_type}) to applications table.")
                     except Exception as e:
                         print(f"Error adding column {col_name}: {e}")
 

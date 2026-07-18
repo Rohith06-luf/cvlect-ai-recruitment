@@ -1,10 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   LayoutDashboard,
   FileText,
-  Gauge,
   Briefcase,
   BarChart3,
   Settings,
@@ -34,7 +33,6 @@ const items: SidebarItem[] = [
   { label: "Dashboard", to: "/candidate/dashboard", icon: LayoutDashboard },
   { label: "Applications", to: "/candidate/dashboard", icon: Briefcase },
   { label: "Resume", to: "/candidate/dashboard", icon: FileText },
-  { label: "AI Resume Score", to: "/candidate/dashboard", icon: Gauge },
   { label: "Skill Gap", to: "/candidate/dashboard", icon: BarChart3 },
   { label: "Settings", to: "/candidate/dashboard", icon: Settings },
 ];
@@ -48,9 +46,15 @@ function CandidateProfile() {
     role: "",
     location: "",
     experience: "",
+    education: "",
     summary: "",
     phone: "",
     skills: "",
+    company: "",
+    designation: "",
+    avatar_url: "",
+    social_links: "",
+    password: "",
   });
 
   const { data: profile, isLoading, error } = useQuery({
@@ -60,18 +64,25 @@ function CandidateProfile() {
     retry: false,
   });
 
-  // Initialize form data when profile loads
-  if (profile && !isEditing) {
-    setFormData({
-      full_name: profile.full_name || "",
-      role: profile.role || "",
-      location: profile.location || "",
-      experience: profile.experience || "",
-      summary: profile.summary || "",
-      phone: profile.location || "", // Using location field for phone temporarily
-      skills: profile.current_skills?.join(", ") || "",
-    });
-  }
+  useEffect(() => {
+    if (!isEditing && profile) {
+      setFormData({
+        full_name: profile.full_name || "",
+        role: profile.role || "",
+        location: profile.location || "",
+        experience: profile.experience || "",
+        education: profile.education || "",
+        summary: profile.summary || "",
+        phone: profile.phone || "",
+        skills: profile.current_skills?.join(", ") || "",
+        company: profile.company || "",
+        designation: profile.designation || "",
+        avatar_url: profile.avatar_url || "",
+        social_links: profile.social_links || "",
+        password: "",
+      });
+    }
+  }, [profile, isEditing]);
 
   const updateProfileMutation = useMutation({
     mutationFn: (data: typeof formData) => api.updateProfile(data),
@@ -202,56 +213,79 @@ function CandidateProfile() {
                     onChange={handleChange}
                     disabled={!isEditing}
                   />
-                </div>
-              </GlassCard>
+                <RowEdit
+                  icon={LinkIcon}
+                  label="Social Links"
+                  name="social_links"
+                  value={formData.social_links}
+                  onChange={handleChange}
+                  disabled={!isEditing}
+                />
+                <RowEdit
+                  icon={FileText}
+                  label="Avatar URL"
+                  name="avatar_url"
+                  value={formData.avatar_url}
+                  onChange={handleChange}
+                  disabled={!isEditing}
+                />
+              </div>
+            </GlassCard>
 
-              <GlassCard className="p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-semibold">Professional</h3>
-                  {isEditing && (
-                    <button
-                      type="button"
-                      onClick={() => setIsEditing(false)}
-                      className="text-xs text-muted-foreground hover:text-white"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-                <div className="space-y-3 text-sm">
-                  <RowEdit
-                    icon={Building2}
-                    label="Current Role"
-                    name="role"
-                    value={formData.role || ""}
-                    onChange={handleChange}
-                    disabled={!isEditing}
-                  />
-                  <RowEdit
-                    icon={Briefcase}
-                    label="Experience"
-                    name="experience"
-                    value={formData.experience}
-                    onChange={handleChange}
-                    disabled={!isEditing}
-                    multiline
-                  />
-                  <RowEdit
-                    icon={LinkIcon}
-                    label="Summary"
-                    name="summary"
-                    value={formData.summary}
-                    onChange={handleChange}
-                    disabled={!isEditing}
-                    multiline
-                  />
-                </div>
-              </GlassCard>
+            <GlassCard className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold">Professional</h3>
+                {isEditing && (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(false)}
+                    className="text-xs text-muted-foreground hover:text-white"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              <div className="space-y-3 text-sm">
+                <RowEdit
+                  icon={Building2}
+                  label="Current Role"
+                  name="role"
+                  value={formData.role || ""}
+                  onChange={handleChange}
+                  disabled={!isEditing}
+                />
+                <RowEdit
+                  icon={Briefcase}
+                  label="Company"
+                  name="company"
+                  value={formData.company}
+                  onChange={handleChange}
+                  disabled={!isEditing}
+                />
+                <RowEdit
+                  icon={FileText}
+                  label="Designation"
+                  name="designation"
+                  value={formData.designation}
+                  onChange={handleChange}
+                  disabled={!isEditing}
+                />
+                <RowEdit
+                  icon={Building2}
+                  label="Experience"
+                  name="experience"
+                  value={formData.experience}
+                  onChange={handleChange}
+                  disabled={!isEditing}
+                  multiline
+                />
+              </div>
+            </GlassCard>
             </div>
 
             <GlassCard className="p-5">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold">About</h3>
+                <h3 className="text-sm font-semibold">Summary</h3>
                 {isEditing && (
                   <button
                     type="button"
@@ -279,7 +313,7 @@ function CandidateProfile() {
 
             <GlassCard className="p-5">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold">Skills</h3>
+                <h3 className="text-sm font-semibold">Skills & Education</h3>
                 {isEditing && (
                   <button
                     type="button"
@@ -291,20 +325,48 @@ function CandidateProfile() {
                 )}
               </div>
               {isEditing ? (
-                <input
-                  name="skills"
-                  value={formData.skills}
-                  onChange={handleChange}
-                  className="w-full bg-transparent border-none outline-none text-sm text-white"
-                  placeholder="Comma-separated skills (e.g., React, Node.js, Python)"
-                />
+                <>
+                  <div className="space-y-3">
+                    <label className="block text-[10px] uppercase tracking-wider text-muted-foreground">Skills</label>
+                    <input
+                      name="skills"
+                      value={formData.skills}
+                      onChange={handleChange}
+                      className="w-full bg-transparent border border-border rounded-xl px-3 py-2 text-sm text-white outline-none"
+                      placeholder="Comma-separated skills"
+                    />
+                    <label className="block text-[10px] uppercase tracking-wider text-muted-foreground">Education</label>
+                    <input
+                      name="education"
+                      value={formData.education}
+                      onChange={handleChange}
+                      className="w-full bg-transparent border border-border rounded-xl px-3 py-2 text-sm text-white outline-none"
+                      placeholder="Your education summary"
+                    />
+                    <label className="block text-[10px] uppercase tracking-wider text-muted-foreground">New Password</label>
+                    <input
+                      type="password"
+                      name="password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      className="w-full bg-transparent border border-border rounded-xl px-3 py-2 text-sm text-white outline-none"
+                      placeholder="Leave blank to keep current password"
+                    />
+                  </div>
+                </>
               ) : (
-                <div className="flex flex-wrap gap-2">
-                  {(profile?.current_skills && profile.current_skills.length > 0 ? profile.current_skills : ["Upload a resume to populate skills"]).map((skill) => (
-                    <span key={skill} className="rounded-full bg-white/5 border border-white/5 px-3 py-1.5 text-xs">
-                      {skill}
-                    </span>
-                  ))}
+                <div className="space-y-3 text-sm">
+                  <Row icon={Building2} label="Education" value={profile?.education || "Not set"} />
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Skills</div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {(profile?.current_skills && profile.current_skills.length > 0 ? profile.current_skills : ["Upload a resume to populate skills"]).map((skill) => (
+                        <span key={skill} className="rounded-full bg-white/5 border border-white/5 px-3 py-1.5 text-xs">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
             </GlassCard>
@@ -338,9 +400,6 @@ function CandidateProfile() {
                   Edit profile
                 </button>
               )}
-              <button className="rounded-xl border border-border bg-white/[0.03] px-4 py-2.5 text-sm font-medium hover:bg-white/[0.06] transition">
-                Change password
-              </button>
             </div>
           </form>
         </main>

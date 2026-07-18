@@ -114,8 +114,74 @@ class RecommendationEngine:
             })
         return recommendations
 
+    def generate_suggestions(self, parsed: dict, text: str, job_description: str) -> dict:
+        resume_skills = {s.lower().strip() for s in parsed.get("skills", []) if s.strip()}
+        
+        # 1. Missing Skills
+        required_skills = self._extract_skills_from_text(job_description)
+        missing_skills = sorted(list(required_skills - resume_skills))
+        
+        # 2. Missing Keywords
+        job_tokens = {w.lower() for w in re.findall(r"\b[a-zA-Z]{4,}\b", job_description) if w.lower() not in {
+            "the", "and", "with", "for", "are", "you", "will", "have", "this", "that", "from", "their", "your"
+        }}
+        resume_tokens = {w.lower() for w in re.findall(r"\b[a-zA-Z]{4,}\b", text)}
+        missing_keywords = sorted(list(job_tokens - resume_tokens))[:6]
+        
+        # 3. Recommended Certifications
+        certifications = []
+        for s in missing_skills:
+            if s in self.recommendations_db:
+                certifications.extend(self.recommendations_db[s]["certifications"])
+        if not certifications:
+            certifications = ["AWS Certified Cloud Practitioner", "Scrum Alliance Certified ScrumMaster (CSM)"]
+        certifications = list(dict.fromkeys(certifications))[:3]
+        
+        # 4. Recommended Projects
+        projects = []
+        for s in missing_skills:
+            projects.append(f"Build a production-grade application showcasing {s.title()} integration.")
+        if not projects:
+            projects = ["Develop a microservices backend API using container orchestration.", "Create a responsive frontend dashboard integrating live REST APIs."]
+        projects = list(dict.fromkeys(projects))[:3]
+        
+        # 5. ATS Improvements
+        ats_imp = []
+        if len(text) < 1000:
+            ats_imp.append("Add more detail: Your resume text is quite short. Aim for at least 3-4 bullet points per role.")
+        if "%" not in text and not any(char.isdigit() for char in text):
+            ats_imp.append("Quantify achievements: Use metrics like 'Improved page loading speed by 25%' or 'Managed a budget of $50k' instead of general descriptions.")
+        else:
+            ats_imp.append("Enhance metrics: Make sure achievements list specific business outcomes and scale of impact.")
+        ats_imp.append("Action-oriented summaries: Begin bullet points with strong action verbs (e.g. 'Engineered', 'Optimized', 'Designed').")
+        
+        # 6. Grammar Suggestions
+        grammar_sug = []
+        passive_voice_indicators = ["was responsible for", "worked on", "helped in", "assisted with", "handled"]
+        if any(indicator in text.lower() for indicator in passive_voice_indicators):
+            grammar_sug.append("Eliminate passive phrases: Replace 'was responsible for developing' with 'Developed' or 'Engineered' to sound proactive.")
+        else:
+            grammar_sug.append("Maintain active voice: Keep starting your experience bullets with direct, powerful action verbs.")
+        grammar_sug.append("Verb tense consistency: Use past tense for completed roles and present tense only for your current role.")
+        
+        # 7. Formatting Suggestions
+        formatting_sug = []
+        if len(text.split("\n")) > 100:
+            formatting_sug.append("Keep it concise: Consider shortening your resume layout to a clean 1-2 pages maximum.")
+        formatting_sug.append("Structure headings clearly: Use standard section titles (e.g. 'Professional Experience', 'Education', 'Skills') so ATS scanners can parse them.")
+        formatting_sug.append("Standard fonts: Use clean, professional sans-serif fonts such as Arial, Calibri, or Inter.")
+
+        return {
+            "missing_skills": [s.upper() for s in missing_skills[:5]],
+            "missing_keywords": [k.upper() for k in missing_keywords],
+            "recommended_certifications": certifications,
+            "recommended_projects": projects,
+            "ats_improvements": ats_imp,
+            "grammar_suggestions": grammar_sug,
+            "formatting_suggestions": formatting_sug
+        }
+
     def _extract_skills_from_text(self, text: str) -> set:
-        # Simple extraction logic matching common tech terms
         skills = {
             "python", "javascript", "typescript", "c++", "java", "sql", "postgresql", 
             "react", "fastapi", "django", "aws", "azure", "docker", "kubernetes", "machine learning",

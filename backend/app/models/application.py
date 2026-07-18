@@ -28,6 +28,11 @@ class Application(Base):
     # Recommendations
     recommended_courses: Mapped[str | None] = mapped_column(Text, nullable=True) # JSON list
     recommended_certs: Mapped[str | None] = mapped_column(Text, nullable=True)   # JSON list
+    missing_keywords: Mapped[str | None] = mapped_column(Text, nullable=True)    # JSON list
+    recommended_projects: Mapped[str | None] = mapped_column(Text, nullable=True) # JSON list
+    ats_improvements: Mapped[str | None] = mapped_column(Text, nullable=True)     # JSON list
+    grammar_suggestions: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON list
+    formatting_suggestions: Mapped[str | None] = mapped_column(Text, nullable=True) # JSON list
     
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 

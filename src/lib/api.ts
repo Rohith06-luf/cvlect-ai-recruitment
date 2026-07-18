@@ -114,6 +114,7 @@ export interface CandidateProfile {
   role: string | null;
   location: string | null;
   experience: string | null;
+  education: string | null;
   summary: string | null;
   resume_path: string | null;
   resume_score: number;
@@ -124,6 +125,11 @@ export interface CandidateProfile {
   education_score: number;
   achievements_score: number;
   career_health: number;
+  company?: string | null;
+  designation?: string | null;
+  avatar_url?: string | null;
+  social_links?: string | null;
+  phone?: string | null;
   current_skills: string[];
   missing_skills: string[];
   created_at: string | null;
@@ -139,6 +145,17 @@ export interface Application {
   company: string | null;
   location: string | null;
   salary: string | null;
+  score?: number;
+  reason?: string | null;
+  matched_skills?: string[];
+  missing_skills?: string[];
+  missing_keywords?: string[];
+  recommended_projects?: string[];
+  ats_improvements?: string[];
+  grammar_suggestions?: string[];
+  formatting_suggestions?: string[];
+  recommended_courses?: string[];
+  recommended_certs?: string[];
 }
 
 export interface PipelineEntry {
@@ -160,6 +177,11 @@ export interface PipelineEntry {
   summary: string | null;
   matched: string[];
   missing: string[];
+  email?: string | null;
+  phone?: string | null;
+  education?: string | null;
+  filename?: string | null;
+  uploaded_at?: string | null;
 }
 
 export interface Stats {
@@ -208,7 +230,7 @@ export const api = {
   updateMe: (body: Partial<User>) =>
     request<User>("/users/me", { method: "PUT", body: JSON.stringify(body) }),
   updateProfile: (body: Record<string, unknown>) =>
-    request<{ success: boolean; message: string; data?: unknown }>("/profiles/me", {
+    request<CandidateProfile>('/profiles/me', {
       method: "PUT",
       body: JSON.stringify(body),
     }),

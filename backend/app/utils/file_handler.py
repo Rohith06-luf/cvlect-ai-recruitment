@@ -11,7 +11,8 @@ from app.core.config import settings
 class FileHandler:
     @staticmethod
     def ensure_upload_dir() -> Path:
-        upload_dir = Path(settings.UPLOAD_DIR)
+        project_root = Path(__file__).resolve().parents[3]
+        upload_dir = project_root / "Resume"
         upload_dir.mkdir(parents=True, exist_ok=True)
         return upload_dir
 

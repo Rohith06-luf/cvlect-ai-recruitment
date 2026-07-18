@@ -1,11 +1,13 @@
 from pathlib import Path
 from typing import Any
+import json
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import create_password_hash, get_current_user
 from app.models.application import Application
 from app.models.candidate import Candidate
 from app.models.job import Job
@@ -19,13 +21,140 @@ from app.utils.file_handler import FileHandler
 router = APIRouter(tags=["Frontend Compatibility"])
 
 
+def sync_resume_folder(db: Session):
+    root = Path(__file__).resolve().parents[3] / "Resume"
+    if not root.exists():
+        return
+        
+    job = db.query(Job).first()
+    if not job:
+        return
+        
+    for path in root.iterdir():
+        if path.is_file() and path.suffix.lower() in {".pdf", ".doc", ".docx"}:
+            filename = path.name
+            filepath = str(path)
+            
+            existing_resume = db.query(Resume).filter(Resume.filename == filename).first()
+            if not existing_resume:
+                try:
+                    ai_service = AIService()
+                    ai_result = ai_service.process_resume(filepath, job_description=job.description)
+                    parsed = ai_result.get("parsed", {})
+                    features = ai_result.get("features", {})
+                    fraud = ai_result.get("fraud_report", {})
+                    bias = ai_result.get("bias_report", {})
+                    summary = ai_result.get("summary", {})
+                    
+                    cand_name = parsed.get("name", "Ingested Candidate")
+                    cand_email = parsed.get("email") or f"ingested-{uuid4()}@example.com"
+                    cand_phone = parsed.get("phone")
+                    
+                    user = db.query(User).filter(User.email == cand_email).first()
+                    if not user:
+                        user = User(
+                            name=cand_name,
+                            email=cand_email,
+                            hashed_password=f"no-login-for-ingested-{uuid4()}",
+                            role="Candidate",
+                            phone=cand_phone,
+                            location=parsed.get("location")
+                        )
+                        db.add(user)
+                        db.commit()
+                        db.refresh(user)
+                        
+                    candidate = db.query(Candidate).filter(Candidate.user_id == user.id).first()
+                    if not candidate:
+                        candidate = Candidate(
+                            user_id=user.id,
+                            phone=cand_phone,
+                            experience=f"{parsed.get('experience_years', 0)} years",
+                            education=", ".join(parsed.get("education", [])),
+                            skills=", ".join(parsed.get("skills", [])),
+                            location=parsed.get("location") or user.location,
+                            summary=summary.get("summary")
+                        )
+                        db.add(candidate)
+                        db.commit()
+                        db.refresh(candidate)
+                        
+                    resume = Resume(
+                        candidate_id=candidate.id,
+                        filename=filename,
+                        filepath=filepath,
+                        ats_score=ai_result["ats_score"],
+                        match_percentage=ai_result["match_percentage"],
+                        status="uploaded",
+                        raw_text=ai_result.get("text"),
+                        skills_list=json.dumps(parsed.get("skills", [])),
+                        experience_years=parsed.get("experience_years", 0),
+                        parsed_education=json.dumps(parsed.get("education", [])),
+                        parsed_projects=json.dumps(parsed.get("projects", [])),
+                        parsed_certifications=json.dumps(parsed.get("certifications", [])),
+                        summary=summary.get("summary"),
+                        fraud_score=fraud.get("risk_score"),
+                        fraud_warnings=json.dumps(fraud.get("warnings", [])),
+                        bias_score=bias.get("bias_score"),
+                        bias_flagged_terms=json.dumps(bias.get("flagged_terms", []))
+                    )
+                    db.add(resume)
+                    db.commit()
+                    db.refresh(resume)
+                    
+                    existing_app = db.query(Application).filter(Application.candidate_id == candidate.id, Application.job_id == job.id).first()
+                    if not existing_app:
+                        skills = {s.lower() for s in parsed.get("skills", [])}
+                        job_skills = ai_service.recommender._extract_skills_from_text(job.description.lower())
+                        matched_s = list(skills & job_skills)
+                        missing_s = list(job_skills - skills)
+                        
+                        recs = ai_service.recommend([{"parsed_resume": parsed, "job_description": job.description}], limit=1)[0].get("recommendations", {})
+                        
+                        missing_k = list(job_skills - skills)
+                        rec_proj = [f"Hands-on project using {s.upper()}" for s in missing_s[:3]]
+                        ats_imp = [
+                            "Quantify achievements: Use metrics like 'Reduced latency by 30%' instead of just listing responsibilities.",
+                            "Tailor summary: Make sure your profile header mirrors the job title (e.g. 'Senior Frontend Engineer')."
+                        ]
+                        gram_sug = ["Use active verbs like 'Led', 'Developed', 'Optimized' at the beginning of bullet points."]
+                        form_sug = ["Maintain a consistent section layout and clear heading hierarchy."]
+                        
+                        app = Application(
+                            candidate_id=candidate.id,
+                            job_id=job.id,
+                            status="applied",
+                            score=ai_result["match_percentage"],
+                            reason=summary.get("summary"),
+                            matched_skills=json.dumps(matched_s),
+                            missing_skills=json.dumps(missing_s),
+                            shap_values=json.dumps(ai_result.get("explanation", {}).get("shap_values", {})),
+                            semantic_similarity=float(features.get("semantic_similarity", 0.0)),
+                            recommended_courses=json.dumps(recs.get("courses", [])),
+                            recommended_certs=json.dumps(recs.get("certifications", [])),
+                            missing_keywords=json.dumps(missing_k),
+                            recommended_projects=json.dumps(rec_proj),
+                            ats_improvements=json.dumps(ats_imp),
+                            grammar_suggestions=json.dumps(gram_sug),
+                            formatting_suggestions=json.dumps(form_sug)
+                        )
+                        db.add(app)
+                        db.commit()
+                except Exception as e:
+                    print(f"Error auto-ingesting resume {filename}: {e}")
+
+
 def _build_profile_update_payload(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
     user_data: dict[str, Any] = {}
     candidate_data: dict[str, Any] = {}
     for key, value in payload.items():
-        if key in {"name", "phone", "company", "job_title", "team", "about"}:
+        if key == "full_name":
+            user_data["name"] = value
+        elif key in {"name", "phone", "password", "avatar_url", "social_links", "location", "company", "job_title", "team", "about"}:
             user_data[key] = value
-        elif key in {"location", "experience", "education", "skills", "summary"}:
+        if key == "role":
+            candidate_data["designation"] = value
+        elif key in {"location", "experience", "education", "skills", "summary", "avatar_url", "social_links", "company", "designation"}:
             candidate_data[key] = value
     return {"user_data": user_data, "candidate_data": candidate_data}
 
@@ -42,15 +171,41 @@ def _serialize_user(user: User) -> dict[str, Any]:
         "email": user.email,
         "role": role,
         "avatar_initials": initials or "U",
-        "phone": None,
-        "location": None,
-        "company": None,
-        "job_title": None,
-        "team": None,
-        "about": None,
+        "avatar_url": user.avatar_url,
+        "social_links": user.social_links,
+        "phone": user.phone,
+        "location": user.location,
+        "company": user.company,
+        "job_title": user.job_title,
+        "team": user.team,
+        "about": user.about,
         "verified": True,
         "created_at": user.created_at.isoformat() if user.created_at else None,
     }
+
+
+@router.put("/users/me")
+def update_my_user(payload: dict[str, Any], current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict[str, Any]:
+    user_data: dict[str, Any] = {}
+    for key, value in payload.items():
+        if key == "full_name":
+            user_data["name"] = value
+        elif key in {"name", "phone", "location", "company", "job_title", "team", "about", "avatar_url", "social_links", "password"}:
+            user_data[key] = value
+
+    if "password" in user_data and user_data["password"]:
+        user_data["hashed_password"] = create_password_hash(user_data.pop("password"))
+    elif "password" in user_data:
+        user_data.pop("password")
+
+    for key, value in user_data.items():
+        if hasattr(current_user, key):
+            setattr(current_user, key, value)
+
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+    return _serialize_user(current_user)
 
 
 @router.post("/auth/signup")
@@ -118,6 +273,8 @@ def list_jobs_compat(db: Session = Depends(get_db), current_user: User = Depends
             "location": None,
             "salary": None,
             "description": job.description,
+            "required_skills": job.required_skills,
+            "experience_required": job.experience_required,
             "status": "active",
             "created_at": job.created_at.isoformat() if job.created_at else None,
         }
@@ -139,6 +296,8 @@ def create_job_compat(payload: dict[str, Any], db: Session = Depends(get_db), cu
         "location": None,
         "salary": None,
         "description": job.description,
+        "required_skills": job.required_skills,
+        "experience_required": job.experience_required,
         "status": "active",
         "created_at": job.created_at.isoformat() if job.created_at else None,
     }
@@ -162,11 +321,9 @@ def get_job_compat(job_id: str, db: Session = Depends(get_db), current_user: Use
     }
 
 
-import json
-from uuid import uuid4
-
 @router.get("/resumes/folder")
-def list_resume_folder(current_user: User = Depends(get_current_user)) -> list[dict[str, str]]:
+def list_resume_folder(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)) -> list[dict[str, str]]:
+    sync_resume_folder(db)
     root = Path(__file__).resolve().parents[3] / "Resume"
     if not root.exists():
         return []
@@ -218,9 +375,14 @@ def get_my_profile(current_user: User = Depends(get_current_user), db: Session =
         "id": candidate.id,
         "user_id": current_user.id,
         "full_name": current_user.name,
-        "role": "candidate",
+        "role": candidate.designation or "candidate",
         "location": candidate.location or current_user.location,
         "experience": candidate.experience,
+        "education": candidate.education,
+        "company": candidate.company,
+        "designation": candidate.designation,
+        "avatar_url": candidate.avatar_url or current_user.avatar_url,
+        "social_links": candidate.social_links or current_user.social_links,
         "summary": candidate.summary or (resume.summary if resume else None),
         "resume_path": resume.filepath if resume else None,
         "resume_score": latest_app.score if latest_app else (resume.match_percentage if resume else 0),
@@ -243,6 +405,12 @@ def update_my_profile(payload: dict[str, Any], current_user: User = Depends(get_
     user_data = update_payload["user_data"]
     candidate_data = update_payload["candidate_data"]
 
+    if "password" in user_data:
+        if user_data["password"]:
+            user_data["hashed_password"] = create_password_hash(user_data.pop("password"))
+        else:
+            user_data.pop("password", None)
+
     if user_data:
         for key, value in user_data.items():
             if hasattr(current_user, key):
@@ -257,7 +425,8 @@ def update_my_profile(payload: dict[str, Any], current_user: User = Depends(get_
         db.refresh(candidate)
 
     for key, value in candidate_data.items():
-        setattr(candidate, key, value)
+        if hasattr(candidate, key):
+            setattr(candidate, key, value)
     db.add(candidate)
     db.commit()
     db.refresh(candidate)
@@ -364,7 +533,18 @@ def list_applications_compat(db: Session = Depends(get_db), current_user: User =
             "job_title": app.job.title if app.job else "Position",
             "company": "Resume AI",
             "location": "Remote",
-            "salary": None
+            "salary": None,
+            "score": app.score,
+            "reason": app.reason,
+            "matched_skills": json.loads(app.matched_skills) if app.matched_skills else [],
+            "missing_skills": json.loads(app.missing_skills) if app.missing_skills else [],
+            "missing_keywords": json.loads(app.missing_keywords) if app.missing_keywords else [],
+            "recommended_projects": json.loads(app.recommended_projects) if app.recommended_projects else [],
+            "ats_improvements": json.loads(app.ats_improvements) if app.ats_improvements else [],
+            "grammar_suggestions": json.loads(app.grammar_suggestions) if app.grammar_suggestions else [],
+            "formatting_suggestions": json.loads(app.formatting_suggestions) if app.formatting_suggestions else [],
+            "recommended_courses": json.loads(app.recommended_courses) if app.recommended_courses else [],
+            "recommended_certs": json.loads(app.recommended_certs) if app.recommended_certs else []
         }
         for app in apps
     ]
@@ -413,7 +593,7 @@ def create_application_compat(payload: dict[str, Any], db: Session = Depends(get
     # Check duplicate
     existing = db.query(Application).filter(Application.candidate_id == candidate.id, Application.job_id == job_id).first()
     if existing:
-        return existing
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You have already applied for this job.")
 
     # Run matching for new application
     resume = db.query(Resume).filter(Resume.candidate_id == candidate.id).order_by(Resume.uploaded_at.desc()).first()
@@ -426,6 +606,11 @@ def create_application_compat(payload: dict[str, Any], db: Session = Depends(get
     semantic_sim = 0.0
     recommended_courses = []
     recommended_certs = []
+    missing_k = []
+    rec_proj = []
+    ats_imp = []
+    gram_sug = []
+    form_sug = []
 
     if resume:
         ai_service = AIService()
@@ -445,6 +630,13 @@ def create_application_compat(payload: dict[str, Any], db: Session = Depends(get
         recs = ai_service.recommend([scored_cand], limit=1)[0].get("recommendations", {})
         recommended_courses = recs.get("courses", [])
         recommended_certs = recs.get("certifications", [])
+        
+        sug = ai_service.recommender.generate_suggestions(parsed, resume.raw_text or "", job.description)
+        missing_k = sug.get("missing_keywords", [])
+        rec_proj = sug.get("recommended_projects", [])
+        ats_imp = sug.get("ats_improvements", [])
+        gram_sug = sug.get("grammar_suggestions", [])
+        form_sug = sug.get("formatting_suggestions", [])
 
     app = Application(
         candidate_id=candidate.id,
@@ -457,7 +649,12 @@ def create_application_compat(payload: dict[str, Any], db: Session = Depends(get
         shap_values=json.dumps(shap_v),
         semantic_similarity=semantic_sim,
         recommended_courses=json.dumps(recommended_courses),
-        recommended_certs=json.dumps(recommended_certs)
+        recommended_certs=json.dumps(recommended_certs),
+        missing_keywords=json.dumps(missing_k),
+        recommended_projects=json.dumps(rec_proj),
+        ats_improvements=json.dumps(ats_imp),
+        grammar_suggestions=json.dumps(gram_sug),
+        formatting_suggestions=json.dumps(form_sug)
     )
     
     db.add(app)
@@ -489,8 +686,13 @@ def update_application_status_compat(application_id: str, status: str, db: Sessi
 
 @router.get("/pipeline")
 def list_pipeline_compat(job_id: str | None = None, recruiter_id: str | None = None, page: int = 1, page_size: int = 20, db: Session = Depends(get_db)):
+    sync_resume_folder(db)
     if not job_id:
-        return []
+        job = db.query(Job).first()
+        if job:
+            job_id = job.id
+        else:
+            return []
         
     # Get all applications for this job
     apps = db.query(Application).filter(Application.job_id == job_id).all()
@@ -572,7 +774,12 @@ def list_pipeline_compat(job_id: str | None = None, recruiter_id: str | None = N
             "experience": r["experience"],
             "summary": r.get("summary", {}).get("summary") or app.reason,
             "matched": matched,
-            "missing": missing
+            "missing": missing,
+            "email": candidate.user.email if candidate.user else None,
+            "phone": candidate.phone,
+            "education": candidate.education,
+            "filename": resume.filename if resume else None,
+            "uploaded_at": resume.uploaded_at.isoformat() if resume and resume.uploaded_at else (app.created_at.isoformat() if app.created_at else None),
         })
 
     return results
@@ -699,6 +906,7 @@ def ingest_pdf_compat(job_id: str | None = None, file: UploadFile = File(...), d
 @router.get("/stats")
 def get_stats_compat(recruiter_id: str | None = None, job_id: str | None = None, db: Session = Depends(get_db)):
     """Get dashboard stats for recruiter."""
+    sync_resume_folder(db)
     from app.models.application import Application
     from app.models.job import Job
     from app.models.candidate import Candidate
@@ -731,6 +939,7 @@ def get_stats_compat(recruiter_id: str | None = None, job_id: str | None = None,
 @router.get("/activities")
 def list_activities_compat(recruiter_id: str | None = None, limit: int = 20, db: Session = Depends(get_db)):
     """Get recent activities for recruiter dashboard."""
+    sync_resume_folder(db)
     from app.models.application import Application
     from app.models.job import Job
     from app.models.candidate import Candidate

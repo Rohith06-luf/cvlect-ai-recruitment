@@ -19,6 +19,8 @@ import {
   ZoomOut,
   RotateCcw,
   Clock,
+  Mail,
+  Phone,
 } from "lucide-react";
 import { Sidebar, type SidebarItem } from "@/components/Sidebar";
 import { Navbar } from "@/components/Navbar";
@@ -51,24 +53,28 @@ function RecruiterDashboard() {
   const { data: stats } = useQuery({
     queryKey: ["stats", "recruiter", recruiterId],
     queryFn: () => api.getStats({ recruiterId }),
+    refetchInterval: 3000,
   });
 
   // Fetch pipeline candidates (paginated)
   const { data: pipelineData } = useQuery({
     queryKey: ["pipeline", recruiterId, page, PAGE_SIZE],
     queryFn: () => api.listPipeline({ recruiterId, page, pageSize: PAGE_SIZE }),
+    refetchInterval: 3000,
   });
 
   // Fetch total count for pagination
   const { data: pipelineCount } = useQuery({
     queryKey: ["pipeline-count", recruiterId],
     queryFn: () => api.countPipeline({ recruiterId }),
+    refetchInterval: 3000,
   });
 
   // Fetch activities
   const { data: activities } = useQuery({
     queryKey: ["activities", recruiterId],
     queryFn: () => api.listActivities(recruiterId, 20),
+    refetchInterval: 3000,
   });
 
   const [resumeFiles, setResumeFiles] = useState<Array<{ name: string; path: string }>>([]);
@@ -338,11 +344,36 @@ function ResumesSection({
                     </div>
                     <div className="min-w-0">
                       <div className="font-semibold truncate">{blind ? `Candidate #${c.rank}` : c.name}</div>
-                      <div className="text-xs text-muted-foreground flex items-center gap-3">
+                      {blind && (
+                        <div className="text-[10px] text-muted-foreground mt-0.5">ID: {c.candidate_id ?? c.id}</div>
+                      )}
+                      <div className="text-xs text-muted-foreground flex items-center gap-3 mt-1">
                         <span className="inline-flex items-center gap-1"><Briefcase className="h-3 w-3" />{c.role}</span>
                         <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{blind ? "—" : c.location}</span>
                         <span>{c.experience}</span>
                       </div>
+                      <div className="text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-1.5 mt-2">
+                        {!blind && c.email && <span className="inline-flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{c.email}</span>}
+                        {!blind && c.phone && <span className="inline-flex items-center gap-1"><Phone className="h-3.5 w-3.5" />{c.phone}</span>}
+                        {c.filename && <span className="inline-flex items-center gap-1"><FileText className="h-3.5 w-3.5" />{c.filename}</span>}
+                        {c.uploaded_at && <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{new Date(c.uploaded_at).toLocaleDateString()}</span>}
+                        <span className="inline-flex items-center gap-1">Status: <span className="text-[var(--color-secondary)] uppercase text-[10px] font-semibold">{c.status}</span></span>
+                      </div>
+                      {c.education && (
+                        <div className="text-xs text-muted-foreground mt-2 font-medium">
+                          Education: <span className="font-normal text-muted-foreground/80">{blind ? c.education.replace(/[A-Za-z0-9\s]+ (University|College|Institute|School|IIT|BITS)/gi, "[Redacted Institution]") : c.education}</span>
+                        </div>
+                      )}
+                      {(c.matched.length > 0 || c.missing.length > 0) && (
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                          {c.matched.map(s => (
+                            <span key={s} className="text-[10px] rounded-full bg-[var(--color-success)]/10 text-[var(--color-success)] px-2 py-0.5 border border-[var(--color-success)]/20">{s}</span>
+                          ))}
+                          {c.missing.map(s => (
+                            <span key={s} className="text-[10px] rounded-full bg-[var(--color-warning)]/10 text-[var(--color-warning)] px-2 py-0.5 border border-[var(--color-warning)]/20">{s}</span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     {c.topMatch && (
                       <span className="ml-2 rounded-full bg-[var(--color-success)]/15 text-[var(--color-success)] px-2 py-0.5 text-[10px] font-medium">
@@ -573,14 +604,19 @@ function ResumeViewer({
           className="cursor-grab active:cursor-grabbing"
           style={{ scale }}
         >
-          <ResumeSheet name={displayName} candidate={candidate} />
+          <ResumeSheet name={displayName} candidate={candidate} blind={blind} />
         </motion.div>
       </div>
     </div>
   );
 }
 
-function ResumeSheet({ name, candidate }: { name: string; candidate: PipelineEntry }) {
+function ResumeSheet({ name, candidate, blind }: { name: string; candidate: PipelineEntry; blind: boolean }) {
+  const displayLocation = blind ? "[Redacted Location]" : (candidate.location ?? "—");
+  const displayEdu = blind 
+    ? (candidate.education ? candidate.education.replace(/[A-Za-z0-9\s]+ (University|College|Institute|School|IIT|BITS)/gi, "[Redacted Institution]") : "Resume education will be shown after parsing")
+    : (candidate.education ?? (candidate.experience ? "Resume education will be shown after parsing" : "No education details captured yet"));
+
   return (
     <div
       className="bg-white text-neutral-900 rounded-md shadow-2xl select-none"
@@ -588,17 +624,27 @@ function ResumeSheet({ name, candidate }: { name: string; candidate: PipelineEnt
     >
       <div className="border-b border-neutral-200 pb-5">
         <h1 className="text-2xl font-semibold tracking-tight">{name}</h1>
-        <p className="text-sm text-neutral-600 mt-1">{candidate.role} · {candidate.location}</p>
+        <p className="text-sm text-neutral-600 mt-1">{candidate.role} · {displayLocation}</p>
         <p className="text-xs text-neutral-500 mt-1">{candidate.experience} experience</p>
+        {!blind && (
+          <p className="text-xs text-neutral-400 mt-1">
+            Email: {candidate.email ?? "—"} | Phone: {candidate.phone ?? "—"}
+          </p>
+        )}
+        {blind && (
+          <p className="text-xs text-neutral-400 mt-1">
+            Candidate ID: {candidate.candidate_id ?? candidate.id}
+          </p>
+        )}
       </div>
 
       <section className="mt-5">
-        <h2 className="text-[11px] uppercase tracking-wider text-neutral-500">Summary</h2>
+        <h2 className="text-[11px] uppercase tracking-wider text-neutral-500 font-bold">Summary</h2>
         <p className="mt-2 text-sm leading-relaxed">{candidate.summary}</p>
       </section>
 
       <section className="mt-5">
-        <h2 className="text-[11px] uppercase tracking-wider text-neutral-500">Skills</h2>
+        <h2 className="text-[11px] uppercase tracking-wider text-neutral-500 font-bold">Skills</h2>
         <div className="mt-2 flex flex-wrap gap-1.5">
           {[...candidate.matched, ...candidate.missing].map((s) => (
             <span key={s} className="text-[11px] rounded-full bg-neutral-100 px-2 py-0.5">{s}</span>
@@ -607,7 +653,7 @@ function ResumeSheet({ name, candidate }: { name: string; candidate: PipelineEnt
       </section>
 
       <section className="mt-5">
-        <h2 className="text-[11px] uppercase tracking-wider text-neutral-500">Experience</h2>
+        <h2 className="text-[11px] uppercase tracking-wider text-neutral-500 font-bold">Experience</h2>
         <div className="mt-2 space-y-3 text-sm">
           <div>
             <div className="font-medium">{candidate.role ?? "Experience details pending"}</div>
@@ -618,8 +664,8 @@ function ResumeSheet({ name, candidate }: { name: string; candidate: PipelineEnt
       </section>
 
       <section className="mt-5">
-        <h2 className="text-[11px] uppercase tracking-wider text-neutral-500">Education</h2>
-        <p className="mt-2 text-sm">{candidate.experience ? "Resume education will be shown after parsing" : "No education details captured yet"}</p>
+        <h2 className="text-[11px] uppercase tracking-wider text-neutral-500 font-bold">Education</h2>
+        <p className="mt-2 text-sm">{displayEdu}</p>
       </section>
     </div>
   );

@@ -1,5 +1,7 @@
 from typing import Any, Dict
 
+from app.ai.summarizer.nim_client import NIMClient
+
 try:
     from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 except ImportError:
@@ -52,21 +54,39 @@ class ResumeSummarizer:
             f"Professional summary:"
         )
 
-        model, tokenizer = self.get_model_and_tokenizer()
         summary_text = None
-
-        if model is not None and tokenizer is not None:
+        nim_client = NIMClient()
+        if nim_client.is_configured():
             try:
-                inputs = tokenizer(prompt, return_tensors="pt", max_length=512, truncation=True)
-                outputs = model.generate(
-                    **inputs, 
-                    max_length=150, 
-                    num_beams=4, 
-                    early_stopping=True
+                nim_prompt = (
+                    f"Write a concise, professional resume summary for a candidate with the following profile:\n"
+                    f"Name: {name}\n"
+                    f"Experience: {experience} years\n"
+                    f"Skills: {skills_str}\n"
+                    f"Education: {edu_str}\n"
+                    f"Projects: {proj_str}\n"
                 )
-                summary_text = tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
+                if candidate.get("job_description"):
+                    nim_prompt += f"Job description: {candidate['job_description']}\n"
+                nim_prompt += "Summary:"
+                summary_text = nim_client.generate(nim_prompt)
             except Exception as e:
-                print(f"FLAN-T5 generation failed: {e}. Falling back to template summarizer.")
+                print(f"NIM generation failed: {e}. Falling back to local summarizer.")
+
+        if not summary_text:
+            model, tokenizer = self.get_model_and_tokenizer()
+            if model is not None and tokenizer is not None:
+                try:
+                    inputs = tokenizer(prompt, return_tensors="pt", max_length=512, truncation=True)
+                    outputs = model.generate(
+                        **inputs,
+                        max_length=150,
+                        num_beams=4,
+                        early_stopping=True,
+                    )
+                    summary_text = tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
+                except Exception as e:
+                    print(f"FLAN-T5 generation failed: {e}. Falling back to template summarizer.")
 
         # Fallback Template Summarizer
         if not summary_text:

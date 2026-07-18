@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE_MB: int = 10
     UPLOAD_DIR: str = str(BASE_DIR / "app" / "uploads" / "resumes")
     STATIC_DIR: str = str(BASE_DIR / "app" / "static")
+    NIM_API_URL: str | None = None
+    NIM_API_KEY: str | None = None
+    NIM_MODEL_NAME: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=str(BASE_DIR / ".env"),

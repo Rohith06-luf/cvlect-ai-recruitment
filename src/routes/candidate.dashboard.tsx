@@ -1,20 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   LayoutDashboard,
   FileText,
-  Gauge,
   Briefcase,
   BarChart3,
   Settings,
   Upload,
-  Send,
-  Sparkles,
   ExternalLink,
   CheckCircle,
-  Clock,
 } from "lucide-react";
 import { Sidebar, type SidebarItem } from "@/components/Sidebar";
 import { Navbar } from "@/components/Navbar";
@@ -27,38 +23,15 @@ export const Route = createFileRoute("/candidate/dashboard")({
   component: CandidateDashboard,
 });
 
-type SectionId = "dashboard" | "applications" | "resume" | "resume-score" | "skill-gap" | "jobs" | "settings";
+type SectionId = "dashboard" | "applications" | "resume" | "skill-gap" | "jobs" | "settings";
 
 const items: SidebarItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "applications", label: "Applications", icon: Briefcase },
   { id: "jobs", label: "Browse Jobs", icon: Briefcase },
   { id: "resume", label: "Resume", icon: FileText },
-  { id: "resume-score", label: "AI Resume Score", icon: Gauge },
   { id: "skill-gap", label: "Skill Gap", icon: BarChart3 },
   { id: "settings", label: "Settings", icon: Settings },
-];
-
-// Fake India job listings for candidates to browse and apply
-const fakeIndiaJobs = [
-  { id: "job-1", company: "TCS", role: "Senior Software Engineer", location: "Mumbai, Maharashtra", salary: "₹18-25 LPA", description: "Looking for experienced Java/Spring Boot developers to work on enterprise banking applications. 5+ years experience required.", match: 92, skills: ["Java", "Spring Boot", "Microservices", "AWS", "PostgreSQL"] },
-  { id: "job-2", company: "Infosys", role: "Full Stack Developer", location: "Bangalore, Karnataka", salary: "₹12-18 LPA", description: "React/Node.js developer needed for digital transformation projects. Strong frontend skills with modern React patterns.", match: 88, skills: ["React", "Node.js", "TypeScript", "MongoDB", "Docker"] },
-  { id: "job-3", company: "Wipro", role: "DevOps Engineer", location: "Hyderabad, Telangana", salary: "₹15-22 LPA", description: "Cloud infrastructure automation role. Experience with Kubernetes, CI/CD pipelines, and AWS/GCP required.", match: 85, skills: ["Kubernetes", "Docker", "AWS", "Terraform", "Jenkins", "Python"] },
-  { id: "job-4", company: "HCL Technologies", role: "Data Scientist", location: "Pune, Maharashtra", salary: "₹20-30 LPA", description: "ML/AI role focusing on predictive analytics for retail clients. Strong Python, TensorFlow/PyTorch experience needed.", match: 90, skills: ["Python", "TensorFlow", "PyTorch", "SQL", "Pandas", "Scikit-learn"] },
-  { id: "job-5", company: "Tech Mahindra", role: "Backend Developer (Go)", location: "Chennai, Tamil Nadu", salary: "₹14-20 LPA", description: "High-performance backend services using Go. Experience with gRPC, distributed systems, and PostgreSQL.", match: 87, skills: ["Go", "gRPC", "PostgreSQL", "Redis", "Docker", "Kubernetes"] },
-  { id: "job-6", company: "Cognizant", role: "Frontend Architect", location: "Gurugram, Haryana", salary: "₹22-30 LPA", description: "Lead frontend architecture for large-scale applications. Expert in React, Next.js, micro-frontends, and performance optimization.", match: 89, skills: ["React", "Next.js", "TypeScript", "Micro-frontends", "Webpack", "GraphQL"] },
-  { id: "job-7", company: "Capgemini", role: "Cloud Solutions Architect", location: "Noida, Uttar Pradesh", salary: "₹25-35 LPA", description: "Design and implement cloud migration strategies. AWS/Azure certified with strong architecture background.", match: 86, skills: ["AWS", "Azure", "Cloud Architecture", "Terraform", "Kubernetes", "Security"] },
-  { id: "job-8", company: "Accenture", role: "AI/ML Engineer", location: "Kolkata, West Bengal", salary: "₹18-28 LPA", description: "Build and deploy ML models at scale. Experience with MLOps, feature stores, and model monitoring required.", match: 91, skills: ["Python", "MLOps", "Kubeflow", "MLflow", "Docker", "Kubernetes", "TensorFlow"] },
-  { id: "job-9", company: "Zoho", role: "Product Engineer", location: "Coimbatore, Tamil Nadu", salary: "₹16-24 LPA", description: "Build SaaS products used by millions. Full-stack role with focus on clean architecture and developer experience.", match: 88, skills: ["Java", "React", "PostgreSQL", "Elasticsearch", "Kafka", "System Design"] },
-  { id: "job-10", company: "Freshworks", role: "Senior Backend Engineer", location: "Chennai, Tamil Nadu", salary: "₹20-28 LPA", description: "Scale backend services for customer engagement platform. Strong in distributed systems, databases, and API design.", match: 90, skills: ["Node.js", "Go", "PostgreSQL", "Redis", "Kafka", "Microservices", "GraphQL"] },
-];
-
-const timeline = [
-  { label: "Applied", tone: "muted" as const },
-  { label: "Under Review", tone: "muted" as const },
-  { label: "Interview", tone: "active" as const },
-  { label: "Selected", tone: "idle" as const },
-  { label: "Rejected", tone: "idle" as const },
 ];
 
 function CandidateDashboard() {
@@ -102,9 +75,8 @@ function CandidateDashboard() {
           >
             {section === "dashboard" && <DashboardSection profile={profile} counts={counts} />}
             {section === "applications" && <ApplicationsSection applications={applications ?? []} />}
-            {section === "jobs" && <JobsSection profile={profile} />}
+            {section === "jobs" && <JobsSection profile={profile} applications={applications ?? []} />}
             {section === "resume" && <ResumeSection profile={profile} />}
-            {section === "resume-score" && <ResumeScoreSection profile={profile} />}
             {section === "skill-gap" && <SkillGapSection profile={profile} />}
             {section === "settings" && <SettingsSection />}
           </motion.div>
@@ -171,15 +143,18 @@ function DashboardSection({ profile, counts }: { profile?: CandidateProfile; cou
 }
 
 function ApplicationsSection({ applications }: { applications: Application[] }) {
+  const [expandedId, setExpandedId] = useState<string | number | null>(null);
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Applied":
+    switch (status.toLowerCase()) {
+      case "applied":
         return "text-[var(--color-secondary)]";
-      case "Interview":
+      case "interview":
         return "text-[var(--color-success)]";
-      case "Under Review":
+      case "shortlisted":
+        return "text-[var(--color-success)]";
+      case "under review":
         return "text-[var(--color-warning)]";
-      case "Rejected":
+      case "rejected":
         return "text-[var(--color-error)]";
       default:
         return "text-muted-foreground";
@@ -203,26 +178,89 @@ function ApplicationsSection({ applications }: { applications: Application[] }) 
                     <div className="flex flex-wrap items-center gap-2 mb-2">
                       <h3 className="font-semibold">{job.job_title ?? "Unknown Role"}</h3>
                       <span className={`text-xs font-medium ${getStatusColor(job.status)}`}>{job.status}</span>
+                      {typeof job.score === "number" && (
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[var(--color-secondary)]/20 text-[var(--color-secondary)]">
+                          Score: {job.score}%
+                        </span>
+                      )}
                     </div>
                     <p className="text-sm text-muted-foreground">{job.company} · {job.location}</p>
                     <p className="text-xs text-muted-foreground mt-1">Applied: {job.applied_date}</p>
-                    <p className="text-sm font-medium mt-2">{job.salary}</p>
+                    {job.reason && <p className="text-xs text-muted-foreground mt-1 italic">{job.reason}</p>}
+
+                    {/* Matched / Missing skills inline */}
+                    {(job.matched_skills?.length || job.missing_skills?.length) ? (
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {job.matched_skills?.map(s => (
+                          <span key={s} className="text-[10px] rounded-full bg-[var(--color-success)]/10 text-[var(--color-success)] px-2 py-0.5 border border-[var(--color-success)]/20">{s}</span>
+                        ))}
+                        {job.missing_skills?.map(s => (
+                          <span key={s} className="text-[10px] rounded-full bg-[var(--color-warning)]/10 text-[var(--color-warning)] px-2 py-0.5 border border-[var(--color-warning)]/20">{s}</span>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                   <div className="flex gap-2 shrink-0">
-                    <button className="rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-white/5 transition">
-                      View
-                    </button>
-                    <button className="rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-white/5 transition">
-                      Details
+                    <button
+                      onClick={() => setExpandedId(expandedId === job.id ? null : job.id)}
+                      className="rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-white/5 transition"
+                    >
+                      {expandedId === job.id ? "Hide" : "Suggestions"}
                     </button>
                   </div>
                 </div>
+
+                {/* Expandable suggestions panel */}
+                {expandedId === job.id && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-4 pt-4 border-t border-border space-y-4">
+                    {job.missing_keywords && job.missing_keywords.length > 0 && (
+                      <SuggestionBlock title="Missing Keywords" items={job.missing_keywords} color="var(--color-warning)" />
+                    )}
+                    {job.recommended_projects && job.recommended_projects.length > 0 && (
+                      <SuggestionBlock title="Recommended Projects" items={job.recommended_projects} color="var(--color-secondary)" />
+                    )}
+                    {job.recommended_certs && job.recommended_certs.length > 0 && (
+                      <SuggestionBlock title="Recommended Certifications" items={job.recommended_certs} color="var(--color-highlight)" />
+                    )}
+                    {job.ats_improvements && job.ats_improvements.length > 0 && (
+                      <SuggestionBlock title="ATS Improvements" items={job.ats_improvements} color="var(--color-primary)" />
+                    )}
+                    {job.grammar_suggestions && job.grammar_suggestions.length > 0 && (
+                      <SuggestionBlock title="Grammar Suggestions" items={job.grammar_suggestions} color="var(--color-success)" />
+                    )}
+                    {job.formatting_suggestions && job.formatting_suggestions.length > 0 && (
+                      <SuggestionBlock title="Formatting Suggestions" items={job.formatting_suggestions} color="var(--color-error)" />
+                    )}
+                    {job.recommended_courses && job.recommended_courses.length > 0 && (
+                      <SuggestionBlock title="Recommended Courses" items={job.recommended_courses} color="var(--color-secondary)" />
+                    )}
+                    {(!job.missing_keywords?.length && !job.recommended_projects?.length && !job.ats_improvements?.length && !job.grammar_suggestions?.length && !job.formatting_suggestions?.length) && (
+                      <p className="text-xs text-muted-foreground">No suggestions available yet — suggestions will appear after resume analysis.</p>
+                    )}
+                  </motion.div>
+                )}
               </div>
             ))
           )}
         </div>
       </GlassCard>
     </>
+  );
+}
+
+function SuggestionBlock({ title, items, color }: { title: string; items: string[]; color: string }) {
+  return (
+    <div>
+      <div className="text-[11px] uppercase tracking-wider font-semibold mb-2" style={{ color }}>{title}</div>
+      <ul className="space-y-1.5">
+        {items.map((item, i) => (
+          <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+            <span className="mt-1 h-1.5 w-1.5 rounded-full shrink-0" style={{ background: color }} />
+            {item}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -398,97 +436,158 @@ function SettingsSection() {
   );
 }
 
-function JobsSection() {
+function JobsSection({ profile, applications }: { profile?: CandidateProfile; applications: Application[] }) {
   const queryClient = useQueryClient();
-  const [appliedJobs, setAppliedJobs] = useState<Set<string>>(new Set());
+  const [pendingUploadJobId, setPendingUploadJobId] = useState<number | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const { data: jobs, isLoading, error } = useQuery({
+    queryKey: ["jobs"],
+    queryFn: () => api.listJobs(),
+    retry: false,
+  });
+
+  const appliedJobIds = new Set((applications ?? []).map((app) => app.job_id));
 
   const applyMutation = useMutation({
-    mutationFn: async (jobId: string) => {
-      const response = await fetch(`/api/applications`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ job_id: jobId }),
-      });
-      if (!response.ok) throw new Error("Failed to apply");
-      return response.json();
-    },
-    onSuccess: (_, jobId) => {
-      setAppliedJobs(prev => new Set(prev).add(jobId));
+    mutationFn: async (jobId: number) => api.createApplication(jobId),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-applications"] });
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      window.alert("Application submitted successfully.");
     },
-    onError: (error) => {
-      alert(`Failed to apply: ${error.message}`);
+    onError: (error: unknown) => {
+      const message = error instanceof Error ? error.message : "Failed to apply";
+      window.alert(message);
     },
   });
 
+  const uploadAndApply = async (jobId: number, file: File) => {
+    setUploadError(null);
+    try {
+      await api.uploadResume(file);
+      await api.createApplication(jobId);
+      queryClient.invalidateQueries({ queryKey: ["my-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["my-applications"] });
+      window.alert("Resume uploaded and application submitted successfully.");
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Upload or apply failed");
+    } finally {
+      setPendingUploadJobId(null);
+    }
+  };
+
+  const handleApply = (jobId: number) => {
+    if (appliedJobIds.has(jobId)) {
+      window.alert("You have already applied to this job.");
+      return;
+    }
+
+    if (!profile?.resume_path) {
+      const shouldUpload = window.confirm("You do not have a resume uploaded. Would you like to upload one now to apply?");
+      if (shouldUpload) {
+        setPendingUploadJobId(jobId);
+        inputRef.current?.click();
+      }
+      return;
+    }
+
+    const useCurrent = window.confirm("Use your current resume for this application? Click OK to use current resume, or Cancel to upload a new one.");
+    if (!useCurrent) {
+      setPendingUploadJobId(jobId);
+      inputRef.current?.click();
+      return;
+    }
+
+    applyMutation.mutate(jobId);
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || pendingUploadJobId === null) return;
+    await uploadAndApply(pendingUploadJobId, file);
+    e.target.value = "";
+  };
+
   return (
     <GlassCard className="p-6">
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".pdf,.doc,.docx"
+        className="hidden"
+        onChange={handleFileChange}
+      />
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-semibold">Browse Jobs (India)</h2>
-        <span className="text-xs text-muted-foreground">{fakeIndiaJobs.length} opportunities</span>
+        <h2 className="text-lg font-semibold">Browse Jobs</h2>
+        <span className="text-xs text-muted-foreground">{jobs?.length ?? 0} opportunities</span>
       </div>
-      <div className="space-y-4">
-        {fakeIndiaJobs.map((job) => {
-          const isApplied = appliedJobs.has(job.id);
-          return (
-            <div key={job.id} className="rounded-xl border border-border bg-white/[0.03] p-5 hover:bg-white/[0.06] transition">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <h3 className="font-semibold text-lg">{job.role}</h3>
-                    <span className="text-xs font-medium px-2 py-1 rounded-full bg-[var(--color-secondary)]/20 text-[var(--color-secondary)]">
-                      {job.match}% Match
-                    </span>
-                    {isApplied && (
-                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-[var(--color-success)]/20 text-[var(--color-success)]">
-                        Applied
+      {isLoading ? (
+        <div className="text-sm text-muted-foreground">Loading jobs…</div>
+      ) : error ? (
+        <div className="text-sm text-danger">Failed to load jobs.</div>
+      ) : jobs && jobs.length > 0 ? (
+        <div className="space-y-4">
+          {jobs.map((job) => {
+            const isApplied = appliedJobIds.has(job.id);
+            return (
+              <div key={job.id} className="rounded-xl border border-border bg-white/[0.03] p-5 hover:bg-white/[0.06] transition">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <h3 className="font-semibold text-lg">{job.title}</h3>
+                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-[var(--color-secondary)]/20 text-[var(--color-secondary)]">
+                        {job.status ?? "Active"}
                       </span>
-                    )}
+                      {isApplied && (
+                        <span className="text-xs font-medium px-2 py-1 rounded-full bg-[var(--color-success)]/20 text-[var(--color-success)]">
+                          Applied
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-1">{job.company} · {job.location ?? "Remote"}</p>
+                    {job.salary && <p className="text-sm font-medium text-[var(--color-warning)] mb-2">{job.salary}</p>}
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{job.description ?? "No description available."}</p>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-1">{job.company} · {job.location}</p>
-                  <p className="text-sm font-medium text-[var(--color-warning)] mb-2">{job.salary}</p>
-                  <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{job.description}</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {job.skills.map((skill) => (
-                      <span key={skill} className="rounded-full px-2 py-0.5 text-[10px] bg-white/5 border border-white/10">
-                        {skill}
-                      </span>
-                    ))}
+                  <div className="flex gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleApply(job.id)}
+                      disabled={isApplied || applyMutation.isPending}
+                      className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
+                        isApplied
+                          ? "bg-[var(--color-success)]/20 text-[var(--color-success)] border border-[var(--color-success)]/30 cursor-not-allowed"
+                          : "btn-glow bg-[var(--color-primary)] hover:brightness-110"
+                      }`}
+                    >
+                      {applyMutation.isPending && applyMutation.variables === job.id ? (
+                        <span className="flex items-center gap-1.5">
+                          <span className="animate-spin h-3 w-3 border-2 border-current border-t-transparent rounded-full" />
+                          Applying...
+                        </span>
+                      ) : isApplied ? (
+                        <span className="flex items-center gap-1.5">
+                          <CheckCircle className="h-3.5 w-3.5" />
+                          Applied
+                        </span>
+                      ) : (
+                        "Apply Now"
+                      )}
+                    </button>
+                    <button className="rounded-xl border border-border bg-white/[0.03] px-4 py-2 text-sm font-medium hover:bg-white/[0.06] transition">
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-                </div>
-                <div className="flex gap-2 shrink-0">
-                  <button
-                    onClick={() => applyMutation.mutate(job.id)}
-                    disabled={isApplied || applyMutation.isPending}
-                    className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
-                      isApplied
-                        ? "bg-[var(--color-success)]/20 text-[var(--color-success)] border border-[var(--color-success)]/30 cursor-not-allowed"
-                        : "btn-glow bg-[var(--color-primary)] hover:brightness-110"
-                    }`}
-                  >
-                    {applyMutation.isPending && applyMutation.variables === job.id ? (
-                      <span className="flex items-center gap-1.5">
-                        <span className="animate-spin h-3 w-3 border-2 border-current border-t-transparent rounded-full" />
-                        Applying...
-                      </span>
-                    ) : isApplied ? (
-                      <span className="flex items-center gap-1.5">
-                        <CheckCircle className="h-3.5 w-3.5" />
-                        Applied
-                      </span>
-                    ) : (
-                      "Apply Now"
-                    )}
-                  </button>
-                  <button className="rounded-xl border border-border bg-white/[0.03] px-4 py-2 text-sm font-medium hover:bg-white/[0.06] transition">
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </button>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="text-sm text-muted-foreground">No open jobs found.</div>
+      )}
+      {uploadError && <div className="mt-4 text-sm text-[var(--color-error)]">{uploadError}</div>}
     </GlassCard>
   );
 }
