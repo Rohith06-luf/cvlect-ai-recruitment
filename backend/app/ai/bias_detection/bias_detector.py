@@ -1,5 +1,6 @@
 import re
 from typing import Any, Dict, List
+import numpy as np
 
 try:
     from fairlearn.metrics import selection_rate, demographic_parity_difference

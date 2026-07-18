@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.security import create_access_token, create_password_hash, create_refresh_token, verify_password
+from app.models.candidate import Candidate
 from app.models.user import User
 from app.schemas.auth import RegisterRequest
 
@@ -26,6 +27,18 @@ class AuthService:
         db.add(user)
         db.commit()
         db.refresh(user)
+
+        if payload.role.strip().lower() == "candidate":
+            candidate = Candidate(
+                user_id=user.id,
+                phone=payload.phone,
+                location=payload.location,
+                experience=payload.experience,
+                education=payload.education,
+                skills=payload.skills,
+            )
+            db.add(candidate)
+            db.commit()
 
         return {
             "user": {

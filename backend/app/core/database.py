@@ -32,7 +32,7 @@ def init_db() -> None:
 
     Base.metadata.create_all(bind=engine)
     
-    # Self-healing migrations: check if resumes table is missing new columns
+    # Self-healing migrations: add missing columns for evolved profile and resume data
     inspector = inspect(engine)
     if inspector.has_table("resumes"):
         existing_cols = {col["name"] for col in inspector.get_columns("resumes")}
@@ -49,13 +49,44 @@ def init_db() -> None:
             "bias_score": "FLOAT",
             "bias_flagged_terms": "TEXT"
         }
-        
+
         with engine.begin() as conn:
             for col_name, col_type in new_cols.items():
                 if col_name not in existing_cols:
                     try:
                         conn.execute(text(f"ALTER TABLE resumes ADD COLUMN {col_name} {col_type}"))
                         print(f"Added column {col_name} ({col_type}) to resumes table.")
+                    except Exception as e:
+                        print(f"Error adding column {col_name}: {e}")
+
+    if inspector.has_table("users"):
+        existing_user_cols = {col["name"] for col in inspector.get_columns("users")}
+        user_cols = {
+            "phone": "VARCHAR(30)",
+            "location": "VARCHAR(200)",
+            "company": "VARCHAR(200)",
+            "job_title": "VARCHAR(200)",
+            "team": "VARCHAR(200)",
+            "about": "TEXT",
+        }
+        with engine.begin() as conn:
+            for col_name, col_type in user_cols.items():
+                if col_name not in existing_user_cols:
+                    try:
+                        conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}"))
+                        print(f"Added column {col_name} ({col_type}) to users table.")
+                    except Exception as e:
+                        print(f"Error adding column {col_name}: {e}")
+
+    if inspector.has_table("candidates"):
+        existing_candidate_cols = {col["name"] for col in inspector.get_columns("candidates")}
+        candidate_cols = {"summary": "TEXT"}
+        with engine.begin() as conn:
+            for col_name, col_type in candidate_cols.items():
+                if col_name not in existing_candidate_cols:
+                    try:
+                        conn.execute(text(f"ALTER TABLE candidates ADD COLUMN {col_name} {col_type}"))
+                        print(f"Added column {col_name} ({col_type}) to candidates table.")
                     except Exception as e:
                         print(f"Error adding column {col_name}: {e}")
 

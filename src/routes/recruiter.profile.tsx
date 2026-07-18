@@ -34,11 +34,10 @@ const items: SidebarItem[] = [
 
 function RecruiterProfile() {
   const { user } = useAuth();
-  
-  // Fetch the current user's profile data
+
   const { data: profile, isLoading, error } = useQuery({
-    queryKey: ["recruiter-profile", user?.id],
-    queryFn: () => api.getUser(user?.id ?? 0),
+    queryKey: ["me"],
+    queryFn: () => api.me(),
     enabled: !!user,
     retry: false,
   });
@@ -56,8 +55,7 @@ function RecruiterProfile() {
           </main>
         </div>
       </div>
-    </div>
-  );
+    );
   }
 
   if (error || !profile) {
@@ -76,8 +74,8 @@ function RecruiterProfile() {
     );
   }
 
-  const initials = profile?.name 
-    ? profile.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+  const initials = user?.name
+    ? user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
     : 'AR';
 
   return (
@@ -100,8 +98,8 @@ function RecruiterProfile() {
                 {initials}
               </div>
               <div>
-                <h2 className="text-xl font-semibold">{profile?.name ?? 'Loading...'}</h2>
-                <p className="text-sm text-muted-foreground">{profile?.job_title ?? 'Recruiter'} · {profile?.team ?? 'Talent Team'}</p>
+                <h2 className="text-xl font-semibold">{user?.name ?? 'Loading...'}</h2>
+                <p className="text-sm text-muted-foreground">{user?.job_title ?? 'Recruiter'} · {user?.team ?? 'Talent Team'}</p>
                 <div className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-[var(--color-success)] bg-[var(--color-success)]/15 rounded-full px-2 py-0.5">
                   Verified account
                 </div>
@@ -113,18 +111,18 @@ function RecruiterProfile() {
             <GlassCard className="p-5">
               <h3 className="text-sm font-semibold mb-4">Contact</h3>
               <div className="space-y-3 text-sm">
-                <Row icon={Mail} label="Email" value={profile?.email ?? 'Not set'} />
-                <Row icon={Phone} label="Phone" value={profile?.phone ?? 'Not set'} />
-                <Row icon={MapPin} label="Location" value={profile?.location ?? 'Not set'} />
+                <Row icon={Mail} label="Email" value={user?.email ?? 'Not set'} />
+                <Row icon={Phone} label="Phone" value={user?.phone ?? 'Not set'} />
+                <Row icon={MapPin} label="Location" value={user?.location ?? 'Not set'} />
               </div>
             </GlassCard>
 
             <GlassCard className="p-5">
               <h3 className="text-sm font-semibold mb-4">Work</h3>
               <div className="space-y-3 text-sm">
-                <Row icon={Building2} label="Company" value={profile?.company ?? 'Not set'} />
-                <Row icon={Briefcase} label="Role" value={profile?.job_title ?? 'Not set'} />
-                <Row icon={UserRound} label="Team" value={profile?.team ?? 'Not set'} />
+                <Row icon={Building2} label="Company" value={user?.company ?? 'Not set'} />
+                <Row icon={Briefcase} label="Role" value={user?.job_title ?? 'Not set'} />
+                <Row icon={UserRound} label="Team" value={user?.team ?? 'Not set'} />
               </div>
             </GlassCard>
           </div>
@@ -132,7 +130,7 @@ function RecruiterProfile() {
           <GlassCard className="p-5">
             <h3 className="text-sm font-semibold mb-4">About</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              {profile?.about ?? 'No bio added yet.'}
+              {user?.about ?? 'No bio added yet.'}
             </p>
           </GlassCard>
 

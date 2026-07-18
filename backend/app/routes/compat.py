@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
@@ -16,6 +17,17 @@ from app.services.auth_service import AuthService
 from app.utils.file_handler import FileHandler
 
 router = APIRouter(tags=["Frontend Compatibility"])
+
+
+def _build_profile_update_payload(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    user_data: dict[str, Any] = {}
+    candidate_data: dict[str, Any] = {}
+    for key, value in payload.items():
+        if key in {"name", "phone", "company", "job_title", "team", "about"}:
+            user_data[key] = value
+        elif key in {"location", "experience", "education", "skills", "summary"}:
+            candidate_data[key] = value
+    return {"user_data": user_data, "candidate_data": candidate_data}
 
 
 def _serialize_user(user: User) -> dict[str, Any]:
@@ -48,6 +60,15 @@ def signup(payload: dict[str, Any], db: Session = Depends(get_db)) -> dict[str, 
         email=payload.get("email"),
         password=payload.get("password"),
         role="Recruiter" if payload.get("role") == "recruiter" else "Candidate",
+        phone=payload.get("phone"),
+        location=payload.get("location"),
+        company=payload.get("company"),
+        job_title=payload.get("job_title"),
+        team=payload.get("team"),
+        about=payload.get("about"),
+        experience=payload.get("experience"),
+        education=payload.get("education"),
+        skills=payload.get("skills"),
     )
     result = AuthService.register(db, register_payload)
     return {"token": result["access_token"], "user": _serialize_user(db.query(User).filter(User.id == result["user"]["id"]).first())}
@@ -144,6 +165,18 @@ def get_job_compat(job_id: str, db: Session = Depends(get_db), current_user: Use
 import json
 from uuid import uuid4
 
+@router.get("/resumes/folder")
+def list_resume_folder(current_user: User = Depends(get_current_user)) -> list[dict[str, str]]:
+    root = Path(__file__).resolve().parents[3] / "Resume"
+    if not root.exists():
+        return []
+    files = []
+    for path in sorted(root.iterdir()):
+        if path.is_file() and path.suffix.lower() in {".pdf", ".doc", ".docx"}:
+            files.append({"name": path.name, "path": str(path)})
+    return files
+
+
 @router.get("/profiles/me")
 def get_my_profile(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict[str, Any]:
     candidate = db.query(Candidate).filter(Candidate.user_id == current_user.id).first()
@@ -170,9 +203,8 @@ def get_my_profile(current_user: User = Depends(get_current_user), db: Session =
             "created_at": None,
         }
 
-    # Fetch latest resume
     resume = db.query(Resume).filter(Resume.candidate_id == candidate.id).order_by(Resume.uploaded_at.desc()).first()
-    
+
     skills = []
     if resume and resume.skills_list:
         try:
@@ -180,7 +212,6 @@ def get_my_profile(current_user: User = Depends(get_current_user), db: Session =
         except Exception:
             skills = resume.skills_list.split(",")
 
-    # Fetch latest application to get job-specific scores if available
     latest_app = db.query(Application).filter(Application.candidate_id == candidate.id).order_by(Application.created_at.desc()).first()
 
     return {
@@ -188,9 +219,9 @@ def get_my_profile(current_user: User = Depends(get_current_user), db: Session =
         "user_id": current_user.id,
         "full_name": current_user.name,
         "role": "candidate",
-        "location": candidate.location,
+        "location": candidate.location or current_user.location,
         "experience": candidate.experience,
-        "summary": resume.summary if resume else None,
+        "summary": candidate.summary or (resume.summary if resume else None),
         "resume_path": resume.filepath if resume else None,
         "resume_score": latest_app.score if latest_app else (resume.match_percentage if resume else 0),
         "ats_score": resume.ats_score if resume else 0,
@@ -204,6 +235,34 @@ def get_my_profile(current_user: User = Depends(get_current_user), db: Session =
         "missing_skills": json.loads(latest_app.missing_skills) if latest_app and latest_app.missing_skills else [],
         "created_at": candidate.created_at.isoformat() if candidate.created_at else None,
     }
+
+
+@router.put("/profiles/me")
+def update_my_profile(payload: dict[str, Any], current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict[str, Any]:
+    update_payload = _build_profile_update_payload(payload)
+    user_data = update_payload["user_data"]
+    candidate_data = update_payload["candidate_data"]
+
+    if user_data:
+        for key, value in user_data.items():
+            if hasattr(current_user, key):
+                setattr(current_user, key, value)
+        db.add(current_user)
+
+    candidate = db.query(Candidate).filter(Candidate.user_id == current_user.id).first()
+    if not candidate:
+        candidate = Candidate(user_id=current_user.id)
+        db.add(candidate)
+        db.commit()
+        db.refresh(candidate)
+
+    for key, value in candidate_data.items():
+        setattr(candidate, key, value)
+    db.add(candidate)
+    db.commit()
+    db.refresh(candidate)
+    db.refresh(current_user)
+    return get_my_profile(current_user=current_user, db=db)
 
 
 @router.post("/profiles/upload-resume")
@@ -650,8 +709,8 @@ def get_stats_compat(recruiter_id: str | None = None, job_id: str | None = None,
     if job_id:
         query = query.filter(Application.job_id == job_id)
     elif recruiter_id:
-        # Get jobs for this recruiter
-        job_ids = db.query(Job.id).filter(Job.recruiter_id == int(recruiter_id)).all()
+        # Get jobs for this recruiter (recruiter_id is a UUID string)
+        job_ids = db.query(Job.id).filter(Job.recruiter_id == recruiter_id).all()
         job_ids = [j[0] for j in job_ids]
         if job_ids:
             query = query.filter(Application.job_id.in_(job_ids))
@@ -681,7 +740,8 @@ def list_activities_compat(recruiter_id: str | None = None, limit: int = 20, db:
     query = db.query(Application).order_by(Application.created_at.desc()).limit(limit)
     
     if recruiter_id:
-        job_ids = db.query(Job.id).filter(Job.recruiter_id == int(recruiter_id)).all()
+        # recruiter_id is a UUID string, not an integer
+        job_ids = db.query(Job.id).filter(Job.recruiter_id == recruiter_id).all()
         job_ids = [j[0] for j in job_ids]
         if job_ids:
             query = query.filter(Application.job_id.in_(job_ids))
@@ -705,7 +765,7 @@ def list_activities_compat(recruiter_id: str | None = None, limit: int = 20, db:
         
         activities.append({
             "id": app.id,
-            "recruiter_id": int(recruiter_id) if recruiter_id else 1,
+            "recruiter_id": recruiter_id,
             "text": text,
             "created_at": app.created_at.isoformat() if app.created_at else None
         })

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard,
@@ -71,8 +71,25 @@ function RecruiterDashboard() {
     queryFn: () => api.listActivities(recruiterId, 20),
   });
 
+  const [resumeFiles, setResumeFiles] = useState<Array<{ name: string; path: string }>>([]);
+
+  useEffect(() => {
+    const basePath = (window as Window & { __VITE_DEV_SERVER__?: unknown }).location?.origin ?? "";
+    void fetch(`${basePath}/Resume`).then(async (resp) => {
+      if (!resp.ok) return;
+      const text = await resp.text();
+      const names = text.match(/href="([^"]+)"/g) ?? [];
+      const files = names
+        .map((entry) => entry.replace(/href="|"/g, ""))
+        .filter((entry) => entry.toLowerCase().endsWith(".pdf"))
+        .map((entry) => ({ name: entry.split("/").pop() ?? entry, path: entry }));
+      setResumeFiles(files);
+    }).catch(() => undefined);
+  }, []);
+
   const totalPages = Math.ceil((pipelineCount?.total ?? 0) / PAGE_SIZE);
   const candidates = pipelineData ?? [];
+  const resumeList = useMemo(() => (resumeFiles.length > 0 ? resumeFiles : []), [resumeFiles]);
 
   const items: SidebarItem[] = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -83,7 +100,7 @@ function RecruiterDashboard() {
   ];
 
   const subtitle: Record<SectionId, string> = {
-    dashboard: "Screening pipeline · Senior Frontend Engineer",
+    dashboard: user?.name ? `Screening pipeline · ${user.name}` : "Screening pipeline",
     resumes: "All resumes in the pipeline",
     blind: "Bias-aware anonymous screening",
     activities: "Recent hiring activity",
@@ -135,6 +152,7 @@ function RecruiterDashboard() {
                 page={page}
                 totalPages={totalPages}
                 setPage={setPage}
+                resumeFiles={resumeList}
               />
             )}
 
@@ -177,7 +195,7 @@ function DashboardSection({
           <div className="min-w-0 flex-1">
             <div className="text-xs uppercase tracking-wider text-muted-foreground">Job Description</div>
             <textarea
-              defaultValue="Senior Frontend Engineer — React, TypeScript, design systems, accessibility. Ship product surfaces with a small, senior team."
+              placeholder="Add or update a job description for this screening session."
               className="mt-2 w-full bg-transparent outline-none resize-none text-sm leading-relaxed"
               rows={2}
             />
@@ -250,6 +268,7 @@ function ResumesSection({
   page,
   totalPages,
   setPage,
+  resumeFiles,
 }: {
   candidates: PipelineEntry[];
   total: number;
@@ -261,6 +280,7 @@ function ResumesSection({
   page: number;
   totalPages: number;
   setPage: (n: number) => void;
+  resumeFiles: Array<{ name: string; path: string }>;
 }) {
   return (
     <>
@@ -277,6 +297,25 @@ function ResumesSection({
       </div>
 
       <div className="space-y-4">
+        {resumeFiles.length > 0 && (
+          <GlassCard hover className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold">Resume Folder</h3>
+                <p className="text-xs text-muted-foreground">Files already available in the Resume directory</p>
+              </div>
+            </div>
+            <div className="mt-3 space-y-2">
+              {resumeFiles.map((file) => (
+                <div key={file.path} className="flex items-center justify-between rounded-lg border border-border bg-white/[0.03] px-3 py-2 text-sm">
+                  <span className="truncate">{file.name}</span>
+                  <span className="text-[11px] text-muted-foreground">Stored</span>
+                </div>
+              ))}
+            </div>
+          </GlassCard>
+        )}
+
         {candidates.map((c) => (
           <motion.div key={c.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
             <GlassCard hover className="p-5">
@@ -571,21 +610,16 @@ function ResumeSheet({ name, candidate }: { name: string; candidate: PipelineEnt
         <h2 className="text-[11px] uppercase tracking-wider text-neutral-500">Experience</h2>
         <div className="mt-2 space-y-3 text-sm">
           <div>
-            <div className="font-medium">Senior Engineer · Acme Inc.</div>
-            <div className="text-xs text-neutral-500">2022 — Present</div>
-            <p className="mt-1 text-neutral-700">Led design-system migration and shipped 40+ product surfaces.</p>
-          </div>
-          <div>
-            <div className="font-medium">Engineer · Northwind</div>
-            <div className="text-xs text-neutral-500">2019 — 2022</div>
-            <p className="mt-1 text-neutral-700">Owned checkout performance; reduced LCP by 38%.</p>
+            <div className="font-medium">{candidate.role ?? "Experience details pending"}</div>
+            <div className="text-xs text-neutral-500">{candidate.experience ?? "Experience details pending"}</div>
+            <p className="mt-1 text-neutral-700">{candidate.summary ?? "Resume details will appear after analysis."}</p>
           </div>
         </div>
       </section>
 
       <section className="mt-5">
         <h2 className="text-[11px] uppercase tracking-wider text-neutral-500">Education</h2>
-        <p className="mt-2 text-sm">B.S. Computer Science</p>
+        <p className="mt-2 text-sm">{candidate.experience ? "Resume education will be shown after parsing" : "No education details captured yet"}</p>
       </section>
     </div>
   );

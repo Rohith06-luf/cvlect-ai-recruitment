@@ -6,10 +6,29 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
+const BACKEND = "http://localhost:8000";
+const API_PATHS = ["/auth", "/api", "/jobs", "/profiles", "/applications", "/pipeline", "/stats", "/activities", "/health", "/docs", "/redoc", "/openapi.json", "/uploads"];
+
+const proxyEntries = Object.fromEntries(
+  API_PATHS.map((path) => [
+    path,
+    {
+      target: BACKEND,
+      changeOrigin: true,
+      secure: false,
+    },
+  ])
+);
+
 export default defineConfig({
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
     server: { entry: "server" },
+  },
+  vite: {
+    server: {
+      proxy: proxyEntries,
+    },
   },
 });

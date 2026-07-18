@@ -6,11 +6,12 @@
  * used because FastAPI serves the built frontend.
  */
 
-const API_URL =
-  (import.meta as any).env?.VITE_API_URL ??
-  (typeof window !== "undefined" && window.location.origin ? "" : "http://localhost:8000");
+// VITE_API_URL is intentionally left empty in development so all requests
+// go through the Vite dev server proxy (vite.config.ts) to avoid CORS issues.
+// In production (same-origin deploy), relative paths work automatically.
+const API_URL = (import.meta as any).env?.VITE_API_URL ?? "";
 
-export const BASE_URL = API_URL || "http://localhost:8000";
+export const BASE_URL = API_URL;
 
 const TOKEN_KEY = "cvlect_token";
 
@@ -40,10 +41,16 @@ async function request<T>(
   options: RequestInit = {},
 ): Promise<T> {
   const token = getToken();
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(options.headers as Record<string, string>),
-  };
+  const headers: Record<string, string> = {};
+  const hasFormData = options.body instanceof FormData;
+
+  if (!hasFormData) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  if (options.headers) {
+    Object.assign(headers, options.headers as Record<string, string>);
+  }
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
@@ -200,6 +207,11 @@ export const api = {
   getUser: (id: number) => request<User>(`/users/${id}`),
   updateMe: (body: Partial<User>) =>
     request<User>("/users/me", { method: "PUT", body: JSON.stringify(body) }),
+  updateProfile: (body: Record<string, unknown>) =>
+    request<{ success: boolean; message: string; data?: unknown }>("/profiles/me", {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
 
   /* Jobs */
   listJobs: (recruiterId?: number) =>
@@ -221,6 +233,8 @@ export const api = {
       headers: {} as Record<string, string>, // let browser set multipart boundary
     });
   },
+
+  listResumeFiles: () => request<Array<{ name: string; path: string }>>("/resumes/folder"),
 
   /* Applications */
   listApplications: (candidateId?: number) =>

@@ -11,9 +11,6 @@ function CandidateAuth() {
     <AuthLayout
       title="Candidate sign in"
       subtitle="Track applications, improve your resume and find the right role."
-      altText="New to CVlect?"
-      altLinkText="Create candidate account"
-      altLinkTo="/candidate/auth"
     >
       <AuthForm submitLabel="Sign in" onSubmitTo="/candidate/dashboard" createLabel="Create candidate account →" role="candidate" />
     </AuthLayout>
