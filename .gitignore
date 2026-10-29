@@ -1,0 +1,46 @@
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.sqlite-journal
+
+# Uploaded resumes and local resume dataset
+/backend/uploads/
+/archive/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.venv/
+venv/
+env/
+ENV/
+
+# Node.js and Vite
+node_modules/
+/frontend/dist/
+.vite/
+*.tsbuildinfo
+
+# Logs and temporary files
+*.log
+~$*
+
+# Operating system files
+.DS_Store
+Thumbs.db
+Desktop.ini

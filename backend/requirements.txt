@@ -1,0 +1,53 @@
+# =============================================================================
+# CVlect AI — Python Dependencies
+# Install: pip install -r requirements.txt
+# =============================================================================
+
+# ---- Web Framework ----
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+python-multipart>=0.0.12
+python-dotenv>=1.0.0
+
+# ---- Database ----
+sqlalchemy>=2.0.36
+aiosqlite>=0.20.0
+
+# ---- Validation ----
+pydantic>=2.10.0
+pydantic-settings>=2.6.0
+
+# ---- Authentication ----
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+bcrypt>=4.2.0
+
+# ---- Document Processing ----
+PyMuPDF>=1.25.0
+python-docx>=1.1.0
+
+# ---- NLP & Deep Learning ----
+torch>=2.5.0
+transformers>=4.46.0
+sentence-transformers>=3.3.0
+spacy>=3.8.0
+
+# ---- Search & Ranking ----
+faiss-cpu>=1.9.0
+scikit-learn>=1.5.0
+
+# ---- Explainability & Fairness ----
+shap>=0.46.0
+fairlearn>=0.11.0
+
+# ---- Data Processing ----
+pandas>=2.2.0
+numpy>=2.1.0
+
+# ---- LLM Integration (NVIDIA NIM) ----
+openai>=1.55.0
+httpx>=0.28.0
+
+# ---- Utilities ----
+aiofiles>=24.1.0
+Pillow>=11.0.0

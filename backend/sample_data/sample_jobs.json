@@ -1,0 +1,139 @@
+[
+  {
+    "title": "Senior Backend Engineer",
+    "company": "ApexCloud Innovations",
+    "description": "ApexCloud Innovations is seeking a Senior Backend Engineer to architect, implement, and scale high-concurrency microservices powering our enterprise data collaboration platform. You will lead technical design, optimize database query performance, and ensure reliability across distributed systems.",
+    "location": "San Francisco, CA",
+    "work_mode": "hybrid",
+    "experience_min": 5,
+    "experience_max": 10,
+    "required_skills": [
+      "python",
+      "fastapi",
+      "postgresql",
+      "redis",
+      "docker",
+      "microservices"
+    ],
+    "preferred_skills": [
+      "aws",
+      "graphql",
+      "kubernetes",
+      "ci/cd",
+      "kafka"
+    ],
+    "education_requirements": [
+      "Bachelor's degree in Computer Science, Software Engineering, or equivalent practical experience"
+    ],
+    "responsibilities": [
+      "Design and maintain scalable RESTful microservices in Python with FastAPI",
+      "Architect and optimize relational schema and SQL query performance on PostgreSQL",
+      "Collaborate with frontend engineers to deliver intuitive API contracts and GraphQL endpoints",
+      "Lead code reviews, enforce unit testing standards, and mentor team members",
+      "Monitor application performance and ensure 99.9% uptime across production clusters"
+    ],
+    "technologies": [
+      "python",
+      "fastapi",
+      "postgresql",
+      "redis",
+      "docker",
+      "aws",
+      "git"
+    ],
+    "seniority": "senior",
+    "category": "engineering"
+  },
+  {
+    "title": "Machine Learning Engineer",
+    "company": "NeuroSphere Analytics",
+    "description": "NeuroSphere Analytics is building state-of-the-art semantic search and NLP models for enterprise knowledge extraction. We are looking for an ML Engineer with 3+ years of experience developing deep learning pipelines, fine-tuning language models, and deploying low-latency inference services.",
+    "location": "New York, NY",
+    "work_mode": "remote",
+    "experience_min": 3,
+    "experience_max": 7,
+    "required_skills": [
+      "python",
+      "pytorch",
+      "nlp",
+      "machine learning",
+      "deep learning",
+      "transformers"
+    ],
+    "preferred_skills": [
+      "huggingface",
+      "fastapi",
+      "docker",
+      "vector databases",
+      "faiss"
+    ],
+    "education_requirements": [
+      "Master's or Bachelor's degree in Data Science, Computer Science, Statistics, or related STEM field"
+    ],
+    "responsibilities": [
+      "Develop, fine-tune, and evaluate deep learning architectures using PyTorch and HuggingFace",
+      "Build feature pipelines and semantic vector search services using embedding models",
+      "Collaborate with data engineers to establish automated model training and validation workflows",
+      "Optimize inference latency and GPU memory utilization for production deployments",
+      "Conduct offline evaluations and diagnostics to minimize bias and model drift"
+    ],
+    "technologies": [
+      "python",
+      "pytorch",
+      "transformers",
+      "scikit-learn",
+      "numpy",
+      "pandas",
+      "fastapi"
+    ],
+    "seniority": "mid",
+    "category": "data-science"
+  },
+  {
+    "title": "Cloud Infrastructure Engineer",
+    "company": "Vanguard Lattice Networks",
+    "description": "Vanguard Lattice Networks is seeking an experienced Cloud Infrastructure Engineer to lead our multi-region Kubernetes platform and cloud automation. You will design infrastructure as code, enhance deployment pipelines, and guarantee high availability, security, and observability across AWS environments.",
+    "location": "Austin, TX",
+    "work_mode": "remote",
+    "experience_min": 4,
+    "experience_max": 8,
+    "required_skills": [
+      "aws",
+      "kubernetes",
+      "terraform",
+      "docker",
+      "ci/cd",
+      "linux"
+    ],
+    "preferred_skills": [
+      "helm",
+      "prometheus",
+      "grafana",
+      "python",
+      "bash",
+      "ansible"
+    ],
+    "education_requirements": [
+      "Bachelor's degree in Computer Science, Information Technology, or relevant cloud industry certifications"
+    ],
+    "responsibilities": [
+      "Provision, secure, and maintain resilient AWS cloud infrastructure using Terraform",
+      "Orchestrate multi-tenant Kubernetes clusters with high availability and automated autoscaling",
+      "Build and optimize CI/CD pipelines for automated testing, container scanning, and deployments",
+      "Implement centralized logging, telemetry, and alerting with Prometheus and Grafana",
+      "Participate in architecture reviews and enforce infrastructure security compliance"
+    ],
+    "technologies": [
+      "aws",
+      "kubernetes",
+      "terraform",
+      "docker",
+      "helm",
+      "prometheus",
+      "linux",
+      "bash"
+    ],
+    "seniority": "mid",
+    "category": "engineering"
+  }
+]

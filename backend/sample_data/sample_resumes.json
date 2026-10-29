@@ -1,0 +1,339 @@
+[
+  {
+    "contact_info": {
+      "name": "Avery Sterling",
+      "email": "avery.sterling.dev@fictional-nexus.example.com",
+      "phone": "+1 (555) 234-5678",
+      "location": "Seattle, WA",
+      "linkedin": "https://linkedin.com/in/avery-sterling-demo",
+      "github": "https://github.com/avery-sterling-demo"
+    },
+    "skills": [
+      "python",
+      "react",
+      "typescript",
+      "fastapi",
+      "django",
+      "aws",
+      "docker",
+      "postgresql",
+      "redis",
+      "graphql",
+      "ci/cd",
+      "microservices",
+      "leadership",
+      "problem solving",
+      "agile"
+    ],
+    "technical_skills": [
+      "python",
+      "react",
+      "typescript",
+      "javascript",
+      "fastapi",
+      "django",
+      "aws",
+      "docker",
+      "postgresql",
+      "redis",
+      "graphql",
+      "git",
+      "kubernetes",
+      "html",
+      "css"
+    ],
+    "soft_skills": [
+      "leadership",
+      "problem solving",
+      "teamwork",
+      "communication",
+      "mentorship",
+      "agile development"
+    ],
+    "education": [
+      {
+        "degree": "Bachelor's",
+        "institution": "Pacific Horizon University",
+        "field": "Computer Science",
+        "year": "2017",
+        "gpa": "3.85"
+      }
+    ],
+    "experience": [
+      {
+        "title": "Lead Full-Stack Engineer",
+        "company": "Novasphere Cloud Systems",
+        "start_date": "2021",
+        "end_date": "Present",
+        "description": "Architected event-driven microservices processing 45M daily requests using FastAPI, PostgreSQL, and Redis. Spearheaded frontend migration to React 18 and TypeScript with 40% page load improvement.",
+        "technologies": ["python", "fastapi", "react", "typescript", "aws", "postgresql", "redis"]
+      },
+      {
+        "title": "Senior Software Engineer",
+        "company": "Beacon Peak Interactive",
+        "start_date": "2019",
+        "end_date": "2021",
+        "description": "Engineered REST and GraphQL APIs using Django and Docker on AWS ECS. Mentored 4 junior engineers and implemented test automation coverage above 90%.",
+        "technologies": ["python", "django", "graphql", "docker", "aws", "postgresql"]
+      },
+      {
+        "title": "Software Engineer",
+        "company": "BlueCrest Digital",
+        "start_date": "2017",
+        "end_date": "2019",
+        "description": "Developed full-stack web applications using React and Python backend services. Configured CI/CD deployment pipelines on GitLab.",
+        "technologies": ["python", "react", "javascript", "postgresql", "git"]
+      }
+    ],
+    "certifications": [
+      {
+        "name": "AWS Certified Solutions Architect - Associate",
+        "issuer": "Amazon Web Services",
+        "year": "2022"
+      }
+    ],
+    "projects": [
+      {
+        "name": "CloudScale Realtime Analytics Engine",
+        "description": "High-throughput streaming platform ingesting IoT telemetrics with FastAPI, Redis, and React visualization dashboards.",
+        "technologies": ["fastapi", "redis", "react", "docker"],
+        "url": "https://github.com/avery-sterling-demo/cloudscale-engine"
+      },
+      {
+        "name": "Omnichannel Customer Portal",
+        "description": "Unified self-service portal serving 200k monthly active users with React and microservices architecture.",
+        "technologies": ["react", "typescript", "python", "postgresql"],
+        "url": null
+      }
+    ],
+    "keywords": [
+      "scalable architecture",
+      "microservices",
+      "rest api",
+      "cloud native",
+      "performance optimization",
+      "distributed systems"
+    ],
+    "summary": "Accomplished Senior Full-Stack Engineer with 7+ years of experience architecting distributed cloud systems, building high-throughput REST/GraphQL APIs, and designing responsive React interfaces. Proven track record leading technical teams and optimizing cloud infrastructure on AWS."
+  },
+  {
+    "contact_info": {
+      "name": "Maya Linnea",
+      "email": "maya.linnea.ai@fictional-cortex.example.com",
+      "phone": "+1 (555) 345-6789",
+      "location": "Austin, TX",
+      "linkedin": "https://linkedin.com/in/maya-linnea-demo",
+      "github": "https://github.com/maya-linnea-demo"
+    },
+    "skills": [
+      "python",
+      "tensorflow",
+      "scikit-learn",
+      "pandas",
+      "numpy",
+      "machine learning",
+      "deep learning",
+      "sql",
+      "data analysis",
+      "r",
+      "git",
+      "critical thinking",
+      "presentation"
+    ],
+    "technical_skills": [
+      "python",
+      "tensorflow",
+      "scikit-learn",
+      "pandas",
+      "numpy",
+      "sql",
+      "r",
+      "keras",
+      "git",
+      "data analysis"
+    ],
+    "soft_skills": [
+      "critical thinking",
+      "problem solving",
+      "communication",
+      "presentation",
+      "adaptability",
+      "collaboration"
+    ],
+    "education": [
+      {
+        "degree": "Master's",
+        "institution": "Solaria State Institute",
+        "field": "Data Science",
+        "year": "2024",
+        "gpa": "3.92"
+      },
+      {
+        "degree": "Bachelor's",
+        "institution": "Solaria State Institute",
+        "field": "Mathematics",
+        "year": "2022",
+        "gpa": "3.78"
+      }
+    ],
+    "experience": [
+      {
+        "title": "Associate Data Scientist",
+        "company": "QuantumPulse Analytics",
+        "start_date": "2024",
+        "end_date": "Present",
+        "description": "Trained predictive regression and classification models using scikit-learn and TensorFlow. Analyzed multi-terabyte transactional datasets using SQL and pandas to derive operational business insights.",
+        "technologies": ["python", "tensorflow", "scikit-learn", "pandas", "sql"]
+      },
+      {
+        "title": "Machine Learning Intern",
+        "company": "SynthWave Dynamics",
+        "start_date": "2023",
+        "end_date": "2024",
+        "description": "Constructed end-to-end automated ETL feature transformation pipelines. Evaluated deep neural network architectures for anomaly detection in telemetry data.",
+        "technologies": ["python", "numpy", "pandas", "tensorflow", "git"]
+      }
+    ],
+    "certifications": [
+      {
+        "name": "TensorFlow Developer Certificate",
+        "issuer": "Google",
+        "year": "2023"
+      }
+    ],
+    "projects": [
+      {
+        "name": "Predictive Customer Churn Engine",
+        "description": "Supervised ensemble classifier achieving 89% ROC-AUC on historical customer retention indicators.",
+        "technologies": ["python", "scikit-learn", "pandas"],
+        "url": "https://github.com/maya-linnea-demo/churn-engine"
+      },
+      {
+        "name": "Real-time Sentiment Analysis Dashboard",
+        "description": "NLP text classification pipeline evaluating public customer feedback trends.",
+        "technologies": ["python", "tensorflow", "pandas"],
+        "url": null
+      }
+    ],
+    "keywords": [
+      "machine learning",
+      "deep learning",
+      "data pipeline",
+      "data analysis",
+      "predictive analytics"
+    ],
+    "summary": "Analytical Junior Data Scientist with 2 years of practical experience developing machine learning models, statistical evaluation pipelines, and exploratory data workflows in Python and TensorFlow. Adept at translating complex data into strategic business value."
+  },
+  {
+    "contact_info": {
+      "name": "Devon Vance",
+      "email": "devon.vance.ops@fictional-stratus.example.com",
+      "phone": "+1 (555) 456-7890",
+      "location": "Denver, CO",
+      "linkedin": "https://linkedin.com/in/devon-vance-demo",
+      "github": "https://github.com/devon-vance-demo"
+    },
+    "skills": [
+      "docker",
+      "kubernetes",
+      "terraform",
+      "aws",
+      "ci/cd",
+      "linux",
+      "bash",
+      "prometheus",
+      "grafana",
+      "gitlab ci",
+      "python",
+      "helm",
+      "ansible",
+      "system design",
+      "collaboration"
+    ],
+    "technical_skills": [
+      "docker",
+      "kubernetes",
+      "terraform",
+      "aws",
+      "linux",
+      "bash",
+      "python",
+      "prometheus",
+      "grafana",
+      "helm",
+      "ansible",
+      "gitlab ci",
+      "git",
+      "nginx"
+    ],
+    "soft_skills": [
+      "collaboration",
+      "problem solving",
+      "time management",
+      "attention to detail",
+      "active listening"
+    ],
+    "education": [
+      {
+        "degree": "Bachelor's",
+        "institution": "Mountain Crest Polytechnic",
+        "field": "Information Technology",
+        "year": "2020",
+        "gpa": "3.65"
+      }
+    ],
+    "experience": [
+      {
+        "title": "DevOps Engineer",
+        "company": "StratusVibe Technologies",
+        "start_date": "2022",
+        "end_date": "Present",
+        "description": "Administered production Kubernetes clusters hosting 80+ microservices on AWS EKS. Designed automated Terraform IaC modules reducing environment provisioning time by 65%.",
+        "technologies": ["kubernetes", "docker", "terraform", "aws", "helm", "prometheus", "grafana"]
+      },
+      {
+        "title": "Cloud Infrastructure Associate",
+        "company": "Apex Orion Systems",
+        "start_date": "2020",
+        "end_date": "2022",
+        "description": "Maintained multi-stage CI/CD pipelines in GitLab CI and Jenkins. Automated configuration management and security patch baselines using Ansible and Bash scripts on Linux.",
+        "technologies": ["linux", "bash", "docker", "ansible", "aws", "gitlab ci"]
+      }
+    ],
+    "certifications": [
+      {
+        "name": "Certified Kubernetes Administrator (CKA)",
+        "issuer": "Cloud Native Computing Foundation",
+        "year": "2023"
+      },
+      {
+        "name": "AWS Certified SysOps Administrator",
+        "issuer": "Amazon Web Services",
+        "year": "2021"
+      }
+    ],
+    "projects": [
+      {
+        "name": "Multi-Region Kubernetes Deployment Pipeline",
+        "description": "ArgoCD and Helm-driven GitOps deployment automation for zero-downtime rolling upgrades across AWS regions.",
+        "technologies": ["kubernetes", "helm", "aws", "docker"],
+        "url": "https://github.com/devon-vance-demo/k8s-gitops"
+      },
+      {
+        "name": "Infrastructure as Code Automation Suite",
+        "description": "Reusable Terraform modules for reproducible VPC, EKS, RDS, and CloudWatch configurations.",
+        "technologies": ["terraform", "aws", "bash"],
+        "url": null
+      }
+    ],
+    "keywords": [
+      "ci/cd pipeline",
+      "cloud native",
+      "container orchestration",
+      "infrastructure as code",
+      "observability",
+      "system design"
+    ],
+    "summary": "Mid-level DevOps Engineer with 4 years of hands-on experience orchestrating Kubernetes clusters, provisioning automated cloud infrastructure with Terraform on AWS, and implementing end-to-end CI/CD observability."
+  }
+]

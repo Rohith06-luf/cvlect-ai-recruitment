@@ -1,0 +1,82 @@
+services:
+  # =============================================================================
+  # PostgreSQL Database
+  # =============================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: cvlect-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cvlect_db}
+      POSTGRES_USER: ${POSTGRES_USER:-cvlect}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cvlect_password}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - cvlect-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cvlect} -d ${POSTGRES_DB:-cvlect_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # =============================================================================
+  # FastAPI Backend Service
+  # =============================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cvlect-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cvlect}:${POSTGRES_PASSWORD:-cvlect_password}@postgres:5432/${POSTGRES_DB:-cvlect_db}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-cvlect-super-secure-production-secret-key-change-me}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      JWT_EXPIRATION_MINUTES: ${JWT_EXPIRATION_MINUTES:-1440}
+      NVIDIA_API_KEY: ${NVIDIA_API_KEY:-}
+      NVIDIA_BASE_URL: ${NVIDIA_BASE_URL:-https://integrate.api.nvidia.com/v1}
+      NVIDIA_MODEL: ${NVIDIA_MODEL:-z-ai/glm-5.3-flash}
+      UPLOAD_DIR: /app/uploads
+      MAX_UPLOAD_SIZE_MB: 10
+      SPACY_MODEL: en_core_web_sm
+      SENTENCE_TRANSFORMER_MODEL: all-MiniLM-L6-v2
+      CORS_ORIGINS: http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173
+      DEBUG: "false"
+    ports:
+      - "8000:8000"
+    volumes:
+      - backend_uploads:/app/uploads
+    networks:
+      - cvlect-network
+
+  # =============================================================================
+  # React / Nginx Frontend Service
+  # =============================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cvlect-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+    networks:
+      - cvlect-network
+
+volumes:
+  postgres_data:
+    driver: local
+  backend_uploads:
+    driver: local
+
+networks:
+  cvlect-network:
+    driver: bridge
